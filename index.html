@@ -2,8 +2,2123 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0;url=explainer.html">
-<title>Redirecting…</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Burst-to-Queue Ledger — Architecture Explainer</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0c10;
+  --bg-panel: #0f1117;
+  --bg-card: #141820;
+  --bg-card-hover: #1a1f2e;
+  --border: #1e2433;
+  --border-glow: #2a3045;
+  --text: #e2e8f0;
+  --text-dim: #8892a4;
+  --text-muted: #4a5568;
+  --cyan: #00d4ff;
+  --cyan-dim: #00d4ff33;
+  --cyan-glow: #00d4ff22;
+  --emerald: #00e676;
+  --emerald-dim: #00e67633;
+  --amber: #ffab00;
+  --amber-dim: #ffab0033;
+  --coral: #ff5252;
+  --coral-dim: #ff525233;
+  --violet: #b388ff;
+  --violet-dim: #b388ff33;
+  --violet-glow: #b388ff18;
+  --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', 'Liberation Mono', monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid background */
+.grid-bg {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Sections */
+.section {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  z-index: 1;
+}
+
+.section-inner {
+  max-width: 1200px;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section-inner.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Dot Navigation */
+.dot-nav {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 100;
+}
+
+.dot-nav a {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  border: 1.5px solid var(--border);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.dot-nav a.active {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-dim);
+}
+
+.dot-nav a::after {
+  content: attr(data-label);
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  background: var(--bg-card);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.dot-nav a:hover::after {
+  opacity: 1;
+}
+
+/* ============================================ */
+/* PANEL 1: HERO */
+/* ============================================ */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+#hero::before {
+  content: '';
+  position: absolute;
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, var(--cyan-dim) 0%, transparent 70%);
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--cyan-dim);
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--cyan);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+  background: var(--cyan-glow);
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cyan);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 28px;
+  background: linear-gradient(135deg, #fff 0%, var(--cyan) 50%, var(--emerald) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-tagline {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--text-dim);
+  max-width: 700px;
+  margin: 0 auto 48px;
+  font-weight: 300;
+  line-height: 1.8;
+}
+
+.hero-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 64px;
+}
+
+.counter-value {
+  font-family: var(--font-mono);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 600;
+  color: var(--cyan);
+  text-shadow: 0 0 40px var(--cyan-dim);
+  tabular-nums: true;
+  font-variant-numeric: tabular-nums;
+}
+
+.counter-label {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.scroll-indicator span {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.scroll-indicator svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-muted);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+/* ============================================ */
+/* PANEL 2: THE PROBLEM */
+/* ============================================ */
+#problem { background: linear-gradient(180deg, var(--bg) 0%, #0d0f14 100%); }
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  margin-bottom: 24px;
+}
+
+.section-desc {
+  font-size: 1.05rem;
+  color: var(--text-dim);
+  max-width: 700px;
+  line-height: 1.8;
+  margin-bottom: 48px;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 32px;
+}
+
+.problem-card {
+  padding: 40px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.problem-card.bad {
+  background: linear-gradient(135deg, #1a0a0a 0%, var(--bg-card) 100%);
+  border-color: var(--coral-dim);
+}
+
+.problem-card.good {
+  background: linear-gradient(135deg, #0a1a10 0%, var(--bg-card) 100%);
+  border-color: var(--emerald-dim);
+}
+
+.problem-card-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.problem-card.bad .problem-card-label { color: var(--coral); }
+.problem-card.good .problem-card-label { color: var(--emerald); }
+
+.problem-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.problem-card p {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.stat-callout {
+  margin-top: 48px;
+  text-align: center;
+  padding: 32px;
+  border: 1px solid var(--coral-dim);
+  border-radius: 12px;
+  background: #1a0a0a;
+}
+
+.stat-number {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  color: var(--coral);
+  margin-bottom: 8px;
+}
+
+.stat-desc {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+/* DB icons */
+.db-icon-container {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+  gap: 16px;
+  align-items: center;
+}
+
+.db-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.db-icon.overloaded {
+  background: var(--coral-dim);
+  border: 2px solid var(--coral);
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+.db-icon.healthy {
+  background: var(--emerald-dim);
+  border: 2px solid var(--emerald);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.warning-icons {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  justify-content: center;
+}
+
+.warning-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--coral);
+  animation: blink 1s ease-in-out infinite;
+}
+
+.warning-dot:nth-child(2) { animation-delay: 0.2s; }
+.warning-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ============================================ */
+/* PANEL 3: ARCHITECTURE */
+/* ============================================ */
+#architecture {
+  background: linear-gradient(180deg, #0d0f14 0%, var(--bg) 100%);
+}
+
+.arch-diagram {
+  width: 100%;
+  margin: 40px 0;
+  position: relative;
+}
+
+.arch-diagram svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Architecture draw-in elements — hidden by default */
+.arch-draw {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.arch-draw.visible {
+  opacity: 1;
+}
+
+.arch-line {
+  stroke-dasharray: var(--line-len, 200);
+  stroke-dashoffset: var(--line-len, 200);
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.arch-line.drawn {
+  stroke-dashoffset: 0;
+}
+
+.arch-box-stroke {
+  stroke-dasharray: var(--box-len, 600);
+  stroke-dashoffset: var(--box-len, 600);
+  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.arch-box-stroke.drawn {
+  stroke-dashoffset: 0;
+}
+
+.arch-particle {
+  opacity: 0;
+}
+
+.arch-particle.running {
+  opacity: 1;
+}
+
+.arch-particle.running circle {
+  animation: particle-travel var(--dur, 3s) linear infinite;
+}
+
+@keyframes particle-travel {
+  0%   { opacity: 0; }
+  5%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.arch-glow-line {
+  opacity: 0;
+  filter: blur(6px);
+  transition: opacity 1s ease 0.5s;
+}
+
+.arch-glow-line.drawn {
+  opacity: 0.5;
+}
+
+.component-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.comp-card {
+  padding: 28px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.comp-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.comp-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-glow);
+}
+
+.comp-card.db1::before { background: var(--cyan); }
+.comp-card.bridge::before { background: var(--amber); }
+.comp-card.db2::before { background: var(--emerald); }
+
+.comp-card.db1:hover { box-shadow: 0 8px 40px var(--cyan-glow); }
+.comp-card.bridge:hover { box-shadow: 0 8px 40px var(--amber-dim); }
+.comp-card.db2:hover { box-shadow: 0 8px 40px var(--emerald-dim); }
+
+.comp-card-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.comp-card h3 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.comp-card.db1 h3 { color: var(--cyan); }
+.comp-card.bridge h3 { color: var(--amber); }
+.comp-card.db2 h3 { color: var(--emerald); }
+
+.comp-card .subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-bottom: 12px;
+}
+
+.comp-card p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  z-index: 50;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ============================================ */
+/* PANEL 4: CLAIM FLOW */
+/* ============================================ */
+#claim-flow {
+  background: linear-gradient(180deg, var(--bg) 0%, #0d0f14 100%);
+}
+
+.timeline {
+  display: flex;
+  gap: 0;
+  margin: 40px 0;
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: 16px;
+}
+
+.timeline-step {
+  flex: 1;
+  min-width: 140px;
+  text-align: center;
+  position: relative;
+  padding: 0 12px;
+}
+
+.timeline-step::after {
+  content: '';
+  position: absolute;
+  top: 24px;
+  right: -50%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--border-glow), var(--border));
+}
+
+.timeline-step:last-child::after { display: none; }
+
+.step-dot {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+}
+
+.step-dot.cyan { background: var(--cyan-dim); color: var(--cyan); border: 2px solid var(--cyan); }
+.step-dot.amber { background: var(--amber-dim); color: var(--amber); border: 2px solid var(--amber); }
+.step-dot.emerald { background: var(--emerald-dim); color: var(--emerald); border: 2px solid var(--emerald); }
+
+.timeline-step.active .step-dot {
+  animation: step-glow 2s ease-in-out infinite;
+}
+
+@keyframes step-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 20px var(--cyan-dim); }
+}
+
+.step-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  line-height: 1.4;
+}
+
+.code-block {
+  background: #0c0e12;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 32px 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+.code-block::before {
+  content: 'SQL';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.code-block code {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-dim);
+}
+
+.code-block .keyword { color: var(--violet); }
+.code-block .function { color: var(--cyan); }
+.code-block .string { color: var(--emerald); }
+.code-block .comment { color: var(--text-muted); font-style: italic; }
+.code-block .special { color: var(--amber); font-weight: 600; }
+
+.state-machine {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 40px 0;
+}
+
+.state-node {
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 2px solid;
+}
+
+.state-node.queued { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-glow); }
+.state-node.validated { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.state-node.committed { border-color: var(--emerald); color: var(--emerald); background: var(--emerald-dim); }
+
+.state-arrow {
+  width: 60px;
+  height: 2px;
+  background: var(--border-glow);
+  position: relative;
+  margin: 0 4px;
+}
+
+.state-arrow::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -4px;
+  border: 5px solid transparent;
+  border-left-color: var(--border-glow);
+}
+
+/* ============================================ */
+/* PANEL 5: DB1 DEEP DIVE */
+/* ============================================ */
+#db1-deep-dive {
+  background: linear-gradient(180deg, #0d0f14 0%, var(--bg) 100%);
+}
+
+.schema-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  margin: 32px 0;
+}
+
+.schema-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.schema-card-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+
+.schema-card-header h4 {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--cyan);
+}
+
+.schema-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.schema-badge.unlogged {
+  background: var(--amber-dim);
+  color: var(--amber);
+  border: 1px solid var(--amber);
+}
+
+.schema-badge.table {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+}
+
+.schema-columns {
+  padding: 0;
+}
+
+.schema-col {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 1px solid #1a1e2a;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.schema-col:hover {
+  background: var(--bg-card-hover);
+}
+
+.schema-col:last-child {
+  border-bottom: none;
+}
+
+.col-name {
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.col-name.pk::after {
+  content: 'PK';
+  font-size: 9px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--amber-dim);
+  color: var(--amber);
+  vertical-align: middle;
+}
+
+.col-type {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Slot lifecycle */
+.lifecycle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 40px 0;
+  padding: 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.lifecycle-node {
+  padding: 16px 32px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 140px;
+}
+
+.lifecycle-node.available {
+  background: var(--cyan-dim);
+  border: 2px solid var(--cyan);
+}
+.lifecycle-node.reserved {
+  background: var(--amber-dim);
+  border: 2px solid var(--amber);
+}
+.lifecycle-node.consumed {
+  background: var(--emerald-dim);
+  border: 2px solid var(--emerald);
+}
+
+.lifecycle-node .lc-status {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.lifecycle-node.available .lc-status { color: var(--cyan); }
+.lifecycle-node.reserved .lc-status { color: var(--amber); }
+.lifecycle-node.consumed .lc-status { color: var(--emerald); }
+
+.lifecycle-node .lc-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.lifecycle-arrow {
+  width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.cron-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.cron-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+
+.cron-card h5 {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--amber);
+  margin-bottom: 4px;
+}
+
+.cron-card .freq {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+
+.cron-card p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* Queue visualization */
+.queue-vis {
+  display: flex;
+  gap: 24px;
+  margin: 32px 0;
+  justify-content: center;
+}
+
+.queue-box {
+  padding: 20px 32px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 200px;
+}
+
+.queue-box.primary {
+  border: 2px solid var(--cyan);
+  background: var(--cyan-glow);
+}
+
+.queue-box.dlq {
+  border: 2px solid var(--coral);
+  background: var(--coral-dim);
+}
+
+.queue-box h5 {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.queue-box.primary h5 { color: var(--cyan); }
+.queue-box.dlq h5 { color: var(--coral); }
+
+.queue-box p {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* ============================================ */
+/* PANEL 6: PLUGGABLE COMMIT */
+/* ============================================ */
+#pluggable {
+  background: linear-gradient(180deg, var(--bg) 0%, #0e0c18 50%, var(--bg) 100%);
+  position: relative;
+}
+
+#pluggable::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--violet-glow) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.new-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: 1.5px solid var(--violet);
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--violet);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  background: var(--violet-dim);
+  animation: badge-glow 3s ease-in-out infinite;
+}
+
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 24px var(--violet-dim); }
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 32px 0;
+}
+
+.toggle-label {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  transition: color 0.3s;
+  cursor: pointer;
+}
+
+.toggle-label.active {
+  color: var(--violet);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 56px;
+  height: 28px;
+  background: var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.3s;
+  border: 1px solid var(--border-glow);
+}
+
+.toggle-switch.webhook {
+  background: var(--violet-dim);
+}
+
+.toggle-switch.rpc {
+  background: var(--emerald-dim);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.toggle-switch.rpc .toggle-knob {
+  transform: translateX(28px);
+}
+
+.mode-content {
+  display: none;
+  animation: fadeUp 0.4s ease;
+}
+
+.mode-content.active {
+  display: block;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mode-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 28px 0;
+  flex-wrap: wrap;
+}
+
+.mode-node {
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 2px solid;
+  text-align: center;
+}
+
+.mode-node.bridge { border-color: var(--amber); color: var(--amber); background: var(--amber-dim); }
+.mode-node.http { border-color: var(--violet); color: var(--violet); background: var(--violet-dim); }
+.mode-node.api { border-color: var(--coral); color: var(--coral); background: var(--coral-dim); }
+.mode-node.legacy { border-color: var(--text-muted); color: var(--text-dim); background: #1a1e2a; }
+.mode-node.supabase { border-color: var(--emerald); color: var(--emerald); background: var(--emerald-dim); }
+
+.mode-arrow {
+  width: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.callout-box {
+  margin: 24px 0;
+  padding: 20px 24px;
+  border-radius: 10px;
+  border-left: 3px solid;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.callout-box.violet {
+  border-color: var(--violet);
+  background: var(--violet-glow);
+  color: var(--text-dim);
+}
+
+.callout-box.emerald {
+  border-color: var(--emerald);
+  background: #00e67608;
+  color: var(--text-dim);
+}
+
+.callout-box strong {
+  color: var(--text);
+}
+
+/* ============================================ */
+/* PANEL 7: ERROR HANDLING */
+/* ============================================ */
+#resilience {
+  background: linear-gradient(180deg, var(--bg) 0%, #0d0f14 100%);
+}
+
+.resilience-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 32px 0;
+}
+
+.resilience-card {
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  position: relative;
+}
+
+.resilience-card h4 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resilience-card p {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.r-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.r-icon.retry { background: var(--amber-dim); color: var(--amber); }
+.r-icon.dlq { background: var(--coral-dim); color: var(--coral); }
+.r-icon.db2 { background: var(--emerald-dim); color: var(--emerald); }
+.r-icon.reaper { background: var(--cyan-dim); color: var(--cyan); }
+
+/* Retry loop SVG */
+.retry-loop-container {
+  display: flex;
+  justify-content: center;
+  margin: 32px 0;
+}
+
+.retry-loop-container svg {
+  max-width: 400px;
+  width: 100%;
+}
+
+.quote-block {
+  margin: 48px 0 0;
+  padding: 32px;
+  border: 1px solid var(--emerald-dim);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0a1a10 0%, var(--bg-card) 100%);
+  text-align: center;
+}
+
+.quote-block blockquote {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  font-weight: 500;
+  color: var(--emerald);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* Error state flow */
+.error-flow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  margin: 32px 0;
+  flex-wrap: wrap;
+}
+
+.ef-node {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-align: center;
+  border: 1.5px solid;
+}
+
+.ef-node.state { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-glow); }
+.ef-node.error { border-color: var(--coral); color: var(--coral); background: var(--coral-dim); font-size: 0.72rem; }
+.ef-node.success { border-color: var(--emerald); color: var(--emerald); background: var(--emerald-dim); }
+
+.ef-arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  min-height: 40px;
+}
+
+/* ============================================ */
+/* RESPONSIVE */
+/* ============================================ */
+@media (max-width: 900px) {
+  .section { padding: 60px 24px; }
+  .problem-grid { grid-template-columns: 1fr; }
+  .component-cards { grid-template-columns: 1fr; }
+  .cron-grid { grid-template-columns: 1fr; }
+  .resilience-grid { grid-template-columns: 1fr; }
+  .schema-grid { grid-template-columns: 1fr; }
+  .timeline { flex-wrap: wrap; justify-content: center; }
+  .timeline-step::after { display: none; }
+  .mode-diagram { gap: 8px; }
+  .lifecycle { flex-wrap: wrap; gap: 12px; }
+  .lifecycle-arrow { width: 30px; }
+  .error-flow { gap: 8px; }
+  .dot-nav { right: 12px; gap: 12px; }
+  .dot-nav a { width: 8px; height: 8px; }
+  .state-machine { flex-wrap: wrap; gap: 8px; }
+  .state-arrow { width: 30px; }
+  .queue-vis { flex-wrap: wrap; }
+}
+
+@media (max-width: 600px) {
+  .hero-title { letter-spacing: -1px; }
+  .section { padding: 40px 16px; }
+  .dot-nav { display: none; }
+  .mode-node { padding: 10px 16px; font-size: 0.75rem; }
+  .code-block { padding: 16px; }
+  .code-block code { font-size: 0.75rem; }
+}
+
+/* Entrance animations */
+.fade-in-child > * {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in-child.visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-in-child.visible > *:nth-child(1) { transition-delay: 0s; }
+.fade-in-child.visible > *:nth-child(2) { transition-delay: 0.08s; }
+.fade-in-child.visible > *:nth-child(3) { transition-delay: 0.16s; }
+.fade-in-child.visible > *:nth-child(4) { transition-delay: 0.12s; }
+.fade-in-child.visible > *:nth-child(5) { transition-delay: 0.2s; }
+.fade-in-child.visible > *:nth-child(6) { transition-delay: 0.24s; }
+.fade-in-child.visible > *:nth-child(7) { transition-delay: 0.28s; }
+.fade-in-child.visible > *:nth-child(8) { transition-delay: 0.32s; }
+.fade-in-child.visible > *:nth-child(9) { transition-delay: 0.36s; }
+.fade-in-child.visible > *:nth-child(10) { transition-delay: 0.4s; }
+
+</style>
 </head>
-<body></body>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- Dot Navigation -->
+<nav class="dot-nav" id="dotNav">
+  <a href="#hero" data-label="Hero" class="active"></a>
+  <a href="#problem" data-label="Problem"></a>
+  <a href="#architecture" data-label="Architecture"></a>
+  <a href="#claim-flow" data-label="Claim Flow"></a>
+  <a href="#db1-deep-dive" data-label="DB1 Deep Dive"></a>
+  <a href="#pluggable" data-label="Pluggable Commit"></a>
+  <a href="#resilience" data-label="Resilience"></a>
+</nav>
+
+<!-- ============================================ -->
+<!-- PANEL 1: HERO -->
+<!-- ============================================ -->
+<section class="section" id="hero">
+  <div class="section-inner" style="text-align:center;">
+    <div class="hero-badge">Architecture Pattern</div>
+    <h1 class="hero-title">The Burst&#8209;to&#8209;Queue<br>Ledger</h1>
+    <p class="hero-tagline">Absorbs massive traffic spikes, processes business logic asynchronously, and smoothly writes finalized data to any legacy or core database.</p>
+    <div class="hero-counter">
+      <span class="counter-value" id="heroCounter">0</span>
+      <span class="counter-label">tickets claimed</span>
+    </div>
+    <div class="scroll-indicator">
+      <span>Scroll</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+        <path d="M12 5v14M19 12l-7 7-7-7"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- PANEL 2: THE PROBLEM -->
+<!-- ============================================ -->
+<section class="section" id="problem">
+  <div class="section-inner fade-in-child">
+    <div class="section-label">01 — The Challenge</div>
+    <h2 class="section-title">Provisioning for the Peak</h2>
+    <p class="section-desc">Legacy relational databases were not designed to handle modern "thundering herd" internet traffic. For events like massive ticket drops, flash sales, or limited-inventory releases, traditional architectures suffer from extreme row-level lock contention, resulting in database crashes, poor user experience — the <em>spinning wheel of death</em> — and lost revenue.</p>
+
+    <div class="problem-grid">
+      <div class="problem-card bad">
+        <div class="problem-card-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Traditional Architecture
+        </div>
+        <div class="db-icon-container">
+          <div>
+            <div class="db-icon overloaded">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <div class="warning-icons">
+              <div class="warning-dot"></div>
+              <div class="warning-dot"></div>
+              <div class="warning-dot"></div>
+            </div>
+          </div>
+        </div>
+        <h3>Single Overloaded Database</h3>
+        <p>Every user hits the same row. Deadlocks cascade. The database buckles under contention — no matter how much vertical scaling you throw at it.</p>
+      </div>
+
+      <div class="problem-card good">
+        <div class="problem-card-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Burst-to-Queue Solution
+        </div>
+        <div class="db-icon-container">
+          <div>
+            <div class="db-icon healthy" style="border-color:var(--cyan);background:var(--cyan-dim);">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <div style="font-size:10px;color:var(--cyan);font-family:var(--font-mono);text-align:center;margin-top:4px;">DB1</div>
+          </div>
+          <span style="color:var(--text-muted);font-size:1.2rem;">→</span>
+          <div style="padding:8px 12px;border:1px dashed var(--amber);border-radius:8px;color:var(--amber);font-family:var(--font-mono);font-size:11px;">queue</div>
+          <span style="color:var(--text-muted);font-size:1.2rem;">→</span>
+          <div>
+            <div class="db-icon healthy">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <div style="font-size:10px;color:var(--emerald);font-family:var(--font-mono);text-align:center;margin-top:4px;">DB2</div>
+          </div>
+        </div>
+        <h3>Decoupled Intake + Ledger</h3>
+        <p>DB1 absorbs the burst with zero-contention SKIP LOCKED. A metered queue feeds the core ledger a calm, ordered stream of validated transactions.</p>
+      </div>
+    </div>
+
+    <div class="stat-callout">
+      <div class="stat-number">100,000</div>
+      <div class="stat-desc">users attempting to decrement the same row simultaneously</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- PANEL 3: ARCHITECTURE -->
+<!-- ============================================ -->
+<section class="section" id="architecture">
+  <div class="section-inner fade-in-child">
+    <div class="section-label">02 — The Architecture</div>
+    <h2 class="section-title">Three Components</h2>
+    <p class="section-desc">Separate the "intent to buy" from the "final system of record." Two databases connected by a serverless worker bridge.</p>
+
+    <div class="arch-diagram" id="archDiagram">
+      <svg viewBox="0 0 1000 240" fill="none" xmlns="http://www.w3.org/2000/svg" id="archSvg">
+        <defs>
+          <filter id="glow-cyan"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="glow-amber"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="glow-green"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <marker id="arrow-cyan" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#00d4ff"/></marker>
+          <marker id="arrow-amber" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#ffab00"/></marker>
+          <marker id="arrow-green" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#00e676"/></marker>
+        </defs>
+
+        <!-- ===== USERS (left edge) ===== -->
+        <g class="arch-draw" data-delay="0">
+          <circle cx="40" cy="70" r="12" stroke="#8892a4" stroke-width="1.5" fill="#8892a415"/>
+          <circle cx="40" cy="120" r="12" stroke="#8892a4" stroke-width="1.5" fill="#8892a415"/>
+          <circle cx="40" cy="170" r="12" stroke="#8892a4" stroke-width="1.5" fill="#8892a415"/>
+          <text x="40" y="74" text-anchor="middle" fill="#8892a4" font-size="12">&#x1f464;</text>
+          <text x="40" y="124" text-anchor="middle" fill="#8892a4" font-size="12">&#x1f464;</text>
+          <text x="40" y="174" text-anchor="middle" fill="#8892a4" font-size="12">&#x1f464;</text>
+          <text x="40" y="210" text-anchor="middle" fill="#4a5568" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">Users</text>
+        </g>
+
+        <!-- ===== Fan-in lines from users to DB1 ===== -->
+        <path d="M56,70 Q100,70 130,100 L160,120" class="arch-line" stroke="#8892a4" stroke-width="1" style="--line-len:140" data-delay="200"/>
+        <path d="M56,120 L160,120" class="arch-line" stroke="#8892a4" stroke-width="1" style="--line-len:104" data-delay="300"/>
+        <path d="M56,170 Q100,170 130,140 L160,120" class="arch-line" stroke="#8892a4" stroke-width="1" style="--line-len:140" data-delay="400"/>
+
+        <!-- ===== DB1 BOX ===== -->
+        <g class="arch-draw" data-delay="500">
+          <rect x="160" y="70" width="180" height="100" rx="14" fill="#00d4ff08"/>
+        </g>
+        <rect x="160" y="70" width="180" height="100" rx="14" fill="none" stroke="#00d4ff" stroke-width="1.5" class="arch-box-stroke" style="--box-len:560" data-delay="500"/>
+        <g class="arch-draw" data-delay="700">
+          <text x="250" y="105" text-anchor="middle" fill="#00d4ff" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="14" font-weight="600">DB1</text>
+          <text x="250" y="125" text-anchor="middle" fill="#8892a4" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="10">Shock Absorber</text>
+          <text x="250" y="145" text-anchor="middle" fill="#4a5568" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">SKIP LOCKED + pgmq</text>
+        </g>
+
+        <!-- ===== Connector: DB1 → Queue (curved) ===== -->
+        <path d="M340,120 C380,120 390,120 430,120" class="arch-line" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" marker-end="url(#arrow-cyan)" style="--line-len:90" data-delay="1000" filter="url(#glow-cyan)"/>
+        <!-- Glow copy -->
+        <path d="M340,120 C380,120 390,120 430,120" class="arch-glow-line" stroke="#00d4ff" stroke-width="6" stroke-linecap="round" data-delay="1000"/>
+
+        <!-- ===== QUEUE BOX ===== -->
+        <g class="arch-draw" data-delay="1200">
+          <rect x="430" y="85" width="130" height="70" rx="10" fill="#ffab000a"/>
+        </g>
+        <rect x="430" y="85" width="130" height="70" rx="10" fill="none" stroke="#ffab00" stroke-width="1.5" stroke-dasharray="6 3" class="arch-box-stroke" style="--box-len:400" data-delay="1200"/>
+        <g class="arch-draw" data-delay="1400">
+          <text x="495" y="115" text-anchor="middle" fill="#ffab00" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="12" font-weight="500">pgmq</text>
+          <text x="495" y="135" text-anchor="middle" fill="#4a5568" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">intake_queue</text>
+        </g>
+
+        <!-- ===== Connector: Queue → Bridge Worker ===== -->
+        <path d="M560,120 C600,120 610,120 650,120" class="arch-line" stroke="#ffab00" stroke-width="2" stroke-linecap="round" marker-end="url(#arrow-amber)" style="--line-len:90" data-delay="1600" filter="url(#glow-amber)"/>
+        <path d="M560,120 C600,120 610,120 650,120" class="arch-glow-line" stroke="#ffab00" stroke-width="6" stroke-linecap="round" data-delay="1600"/>
+
+        <!-- ===== BRIDGE WORKER BOX ===== -->
+        <g class="arch-draw" data-delay="1800">
+          <rect x="650" y="70" width="180" height="100" rx="14" fill="#ffab000a"/>
+        </g>
+        <rect x="650" y="70" width="180" height="100" rx="14" fill="none" stroke="#ffab00" stroke-width="1.5" class="arch-box-stroke" style="--box-len:560" data-delay="1800"/>
+        <g class="arch-draw" data-delay="2000">
+          <text x="740" y="105" text-anchor="middle" fill="#ffab00" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="14" font-weight="600">Bridge Worker</text>
+          <text x="740" y="125" text-anchor="middle" fill="#8892a4" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="10">Edge Functions</text>
+          <text x="740" y="145" text-anchor="middle" fill="#4a5568" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">Validate &amp; Commit</text>
+        </g>
+
+        <!-- ===== Connector: Bridge → DB2 (curved down and right) ===== -->
+        <path d="M830,120 C870,120 900,120 960,120" class="arch-line" stroke="#00e676" stroke-width="2" stroke-linecap="round" style="--line-len:130" data-delay="2200"/>
+        <path d="M830,120 C870,120 900,120 960,120" class="arch-glow-line" stroke="#00e676" stroke-width="6" stroke-linecap="round" data-delay="2200"/>
+
+        <!-- ===== Connector: down to DB2 ===== -->
+
+        <!-- ===== Arrowhead at DB2 end (manual since marker on curved) ===== -->
+        <polygon points="955,115 965,120 955,125" fill="#00e676" class="arch-draw" data-delay="2400"/>
+
+        <!-- ===== Animated traveling particles (controlled by JS) ===== -->
+        <g class="arch-particle" id="particleGroup">
+          <!-- Particle 1: DB1 → Queue -->
+          <circle r="5" fill="#00d4ff" filter="url(#glow-cyan)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M340,120 C380,120 390,120 430,120" begin="indefinite" id="pm1"/>
+            <animate attributeName="opacity" values="0;1;1;1;0" dur="2s" repeatCount="indefinite" begin="indefinite" id="po1"/>
+          </circle>
+          <circle r="5" fill="#00d4ff" filter="url(#glow-cyan)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M340,120 C380,120 390,120 430,120" begin="indefinite" id="pm1b"/>
+            <animate attributeName="opacity" values="0;1;1;1;0" dur="2s" repeatCount="indefinite" begin="indefinite" id="po1b"/>
+          </circle>
+          <!-- Particle 2: Queue → Bridge -->
+          <circle r="5" fill="#ffab00" filter="url(#glow-amber)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M560,120 C600,120 610,120 650,120" begin="indefinite" id="pm2"/>
+            <animate attributeName="opacity" values="0;1;1;1;0" dur="2s" repeatCount="indefinite" begin="indefinite" id="po2"/>
+          </circle>
+          <circle r="5" fill="#ffab00" filter="url(#glow-amber)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M560,120 C600,120 610,120 650,120" begin="indefinite" id="pm2b"/>
+            <animate attributeName="opacity" values="0;1;1;1;0" dur="2s" repeatCount="indefinite" begin="indefinite" id="po2b"/>
+          </circle>
+          <!-- Particle 3: Bridge → DB2 -->
+          <circle r="5" fill="#00e676" filter="url(#glow-green)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M830,120 C870,120 900,120 960,120" begin="indefinite" id="pm3"/>
+            <animate attributeName="opacity" values="0;1;1;1;0" dur="2s" repeatCount="indefinite" begin="indefinite" id="po3"/>
+          </circle>
+          <circle r="5" fill="#00e676" filter="url(#glow-green)">
+            <animateMotion dur="2s" repeatCount="indefinite" path="M830,120 C870,120 900,120 960,120" begin="indefinite" id="pm3b"/>
+            <animate attributeName="opacity" values="0;1;1;1;0" dur="2s" repeatCount="indefinite" begin="indefinite" id="po3b"/>
+          </circle>
+        </g>
+
+        <!-- ===== "polite, metered stream" label ===== -->
+        <g class="arch-draw" data-delay="2600">
+          <text x="500" y="230" text-anchor="middle" fill="#4a5568" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="10" font-style="italic">"a polite, metered stream of finalized, validated transactions"</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="component-cards">
+      <div class="comp-card db1 tooltip">
+        <span class="tooltip-text">Ephemeral Postgres with pgmq extension. Spin up before event, tear down after.</span>
+        <div class="comp-card-num">01</div>
+        <h3>DB1: The Shock Absorber</h3>
+        <div class="subtitle">Ephemeral Intake</div>
+        <p>UNLOGGED tables + SKIP LOCKED = zero deadlocks. Instantly locks available inventory and drops the intent into a pgmq message queue.</p>
+      </div>
+
+      <div class="comp-card bridge tooltip">
+        <span class="tooltip-text">Supabase Edge Functions with Promise.race timeout guard and structured JSON logging.</span>
+        <div class="comp-card-num">02</div>
+        <h3>The Serverless Bridge</h3>
+        <div class="subtitle">Supabase Edge Functions</div>
+        <p>Horizontally scalable workers that pull from the queue at a controlled, throttled rate. Acts as a generic orchestrator for validation and commit.</p>
+      </div>
+
+      <div class="comp-card db2 tooltip">
+        <span class="tooltip-text">Receives only finalized, validated transactions. Protected by idempotent ON CONFLICT.</span>
+        <div class="comp-card-num">03</div>
+        <h3>DB2: The Core Ledger</h3>
+        <div class="subtitle">Your Existing Database</div>
+        <p>Only receives a polite, metered stream of finalized, validated transactions. Your legacy system stays completely protected.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- PANEL 4: CLAIM FLOW -->
+<!-- ============================================ -->
+<section class="section" id="claim-flow">
+  <div class="section-inner fade-in-child">
+    <div class="section-label">03 — The Claim Flow</div>
+    <h2 class="section-title">A Ticket's Journey</h2>
+    <p class="section-desc">From click to confirmation — every step is designed for zero-contention, fault-tolerant processing.</p>
+
+    <div class="timeline">
+      <div class="timeline-step active">
+        <div class="step-dot cyan">1</div>
+        <div class="step-label">User clicks<br><strong>"Buy"</strong></div>
+      </div>
+      <div class="timeline-step">
+        <div class="step-dot cyan">2</div>
+        <div class="step-label"><code style="color:var(--cyan);font-size:0.75rem;">SKIP LOCKED</code><br>grabs slot</div>
+      </div>
+      <div class="timeline-step">
+        <div class="step-dot cyan">3</div>
+        <div class="step-label">pgmq<br>enqueue</div>
+      </div>
+      <div class="timeline-step">
+        <div class="step-dot amber">4</div>
+        <div class="step-label">Bridge worker<br>reads batch</div>
+      </div>
+      <div class="timeline-step">
+        <div class="step-dot amber">5</div>
+        <div class="step-label">Validate<br>via webhook</div>
+      </div>
+      <div class="timeline-step">
+        <div class="step-dot emerald">6</div>
+        <div class="step-label">Commit<br>to DB2</div>
+      </div>
+      <div class="timeline-step">
+        <div class="step-dot emerald">7</div>
+        <div class="step-label">Slot marked<br><strong>CONSUMED</strong></div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <code><span class="comment">-- The SKIP LOCKED pattern: zero-contention slot claiming</span>
+<span class="keyword">UPDATE</span> inventory_slots
+<span class="keyword">SET</span> status = <span class="string">'RESERVED'</span>, locked_by = p_user_id, locked_at = <span class="function">NOW</span>()
+<span class="keyword">WHERE</span> id = (
+    <span class="keyword">SELECT</span> id <span class="keyword">FROM</span> inventory_slots
+    <span class="keyword">WHERE</span> pool_id = p_pool_id <span class="keyword">AND</span> status = <span class="string">'AVAILABLE'</span>
+    <span class="keyword">LIMIT</span> 1
+    <span class="special">FOR UPDATE SKIP LOCKED</span>
+)
+<span class="keyword">RETURNING</span> id <span class="keyword">INTO</span> claimed_slot_id;</code>
+    </div>
+
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-bottom:16px;color:var(--text-dim);">State Machine</h3>
+    <div class="state-machine">
+      <div class="state-node queued">queued</div>
+      <div class="state-arrow"></div>
+      <div class="state-node validated">validated</div>
+      <div class="state-arrow"></div>
+      <div class="state-node committed">committed</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- PANEL 5: DB1 DEEP DIVE -->
+<!-- ============================================ -->
+<section class="section" id="db1-deep-dive">
+  <div class="section-inner fade-in-child">
+    <div class="section-label">04 — DB1 Deep Dive</div>
+    <h2 class="section-title">Tables &amp; Queues</h2>
+
+    <div class="schema-grid">
+      <!-- inventory_slots -->
+      <div class="schema-card">
+        <div class="schema-card-header">
+          <h4>inventory_slots</h4>
+          <span class="schema-badge unlogged">Unlogged</span>
+        </div>
+        <div class="schema-columns">
+          <div class="schema-col"><span class="col-name pk">id</span><span class="col-type">UUID</span></div>
+          <div class="schema-col"><span class="col-name">pool_id</span><span class="col-type">TEXT NOT NULL</span></div>
+          <div class="schema-col"><span class="col-name">status</span><span class="col-type">slot_status</span></div>
+          <div class="schema-col"><span class="col-name">locked_by</span><span class="col-type">TEXT</span></div>
+          <div class="schema-col"><span class="col-name">locked_at</span><span class="col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <!-- engine_config -->
+      <div class="schema-card">
+        <div class="schema-card-header">
+          <h4>engine_config</h4>
+          <span class="schema-badge table">Table</span>
+        </div>
+        <div class="schema-columns">
+          <div class="schema-col"><span class="col-name pk">pool_id</span><span class="col-type">TEXT</span></div>
+          <div class="schema-col"><span class="col-name">batch_size</span><span class="col-type">INT DEFAULT 100</span></div>
+          <div class="schema-col"><span class="col-name">visibility_timeout_sec</span><span class="col-type">INT DEFAULT 45</span></div>
+          <div class="schema-col"><span class="col-name">max_retries</span><span class="col-type">INT DEFAULT 10</span></div>
+          <div class="schema-col"><span class="col-name">is_active</span><span class="col-type">BOOLEAN</span></div>
+          <div class="schema-col"><span class="col-name">validation_webhook_url</span><span class="col-type">TEXT</span></div>
+          <div class="schema-col"><span class="col-name">commit_rpc_name</span><span class="col-type">TEXT</span></div>
+          <div class="schema-col"><span class="col-name" style="color:var(--violet);">commit_webhook_url</span><span class="col-type" style="color:var(--violet);">TEXT <span style="font-size:9px;background:var(--violet-dim);color:var(--violet);padding:1px 4px;border-radius:3px;">NEW</span></span></div>
+        </div>
+      </div>
+
+      <!-- engine_metrics -->
+      <div class="schema-card">
+        <div class="schema-card-header">
+          <h4>engine_metrics</h4>
+          <span class="schema-badge table">Table</span>
+        </div>
+        <div class="schema-columns">
+          <div class="schema-col"><span class="col-name pk">id</span><span class="col-type">BIGINT IDENTITY</span></div>
+          <div class="schema-col"><span class="col-name">captured_at</span><span class="col-type">TIMESTAMPTZ</span></div>
+          <div class="schema-col"><span class="col-name">pool_id</span><span class="col-type">TEXT NOT NULL</span></div>
+          <div class="schema-col"><span class="col-name">available_slots</span><span class="col-type">INT</span></div>
+          <div class="schema-col"><span class="col-name">reserved_slots</span><span class="col-type">INT</span></div>
+          <div class="schema-col"><span class="col-name">consumed_slots</span><span class="col-type">INT</span></div>
+          <div class="schema-col"><span class="col-name">queue_depth</span><span class="col-type">INT</span></div>
+          <div class="schema-col"><span class="col-name">dlq_depth</span><span class="col-type">INT DEFAULT 0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slot lifecycle -->
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-top:40px;margin-bottom:8px;">Slot Lifecycle</h3>
+    <div class="lifecycle">
+      <div class="lifecycle-node available">
+        <div class="lc-status">AVAILABLE</div>
+        <div class="lc-desc">Ready for claim</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-node reserved">
+        <div class="lc-status">RESERVED</div>
+        <div class="lc-desc">Locked by user</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-node consumed">
+        <div class="lc-status">CONSUMED</div>
+        <div class="lc-desc">Committed to DB2</div>
+      </div>
+    </div>
+
+    <!-- Queues -->
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-top:40px;margin-bottom:8px;">Message Queues</h3>
+    <div class="queue-vis">
+      <div class="queue-box primary">
+        <h5>intake_queue</h5>
+        <p>Primary processing queue. FIFO with visibility timeout.</p>
+      </div>
+      <div class="queue-box dlq">
+        <h5>intake_dlq</h5>
+        <p>Dead letter queue. Messages after max retries.</p>
+      </div>
+    </div>
+
+    <!-- Cron Jobs -->
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-top:40px;margin-bottom:8px;">Cron Jobs (pg_cron)</h3>
+    <div class="cron-grid">
+      <div class="cron-card">
+        <h5>metrics_snapshot</h5>
+        <div class="freq">Every 1 minute</div>
+        <p>Snapshots available_slots, queue_depth, dlq_depth per pool into engine_metrics.</p>
+      </div>
+      <div class="cron-card">
+        <h5>reap_orphaned_slots</h5>
+        <div class="freq">Every 2 minutes</div>
+        <p>Resets stuck RESERVED slots (older than 10 min with no queue message) back to AVAILABLE.</p>
+      </div>
+      <div class="cron-card">
+        <h5>drain_queue_trigger</h5>
+        <div class="freq">Every 1 minute</div>
+        <p>Wakes up the Bridge Worker edge function via net.http_post to process the queue.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- PANEL 6: PLUGGABLE COMMIT -->
+<!-- ============================================ -->
+<section class="section" id="pluggable">
+  <div class="section-inner fade-in-child" style="position:relative;z-index:2;">
+    <div class="new-badge">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      New Feature
+    </div>
+    <h2 class="section-title" style="background:linear-gradient(135deg,#fff 0%,var(--violet) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Pluggable Commit Interface</h2>
+    <p class="section-desc">Zero Migration Risk — your core database stays completely protected. Choose the commit strategy that matches your infrastructure.</p>
+
+    <!-- Toggle -->
+    <div class="toggle-container">
+      <span class="toggle-label active" id="labelWebhook" onclick="setMode('webhook')">Webhook Mode</span>
+      <div class="toggle-switch webhook" id="toggleSwitch" onclick="toggleMode()">
+        <div class="toggle-knob"></div>
+      </div>
+      <span class="toggle-label" id="labelRpc" onclick="setMode('rpc')">RPC Mode</span>
+    </div>
+
+    <!-- Webhook Mode Content -->
+    <div class="mode-content active" id="webhookContent">
+      <div class="mode-diagram">
+        <div class="mode-node bridge">Bridge Worker</div>
+        <div class="mode-arrow">→</div>
+        <div class="mode-node http">HTTP POST</div>
+        <div class="mode-arrow">→</div>
+        <div class="mode-node api">Legacy API</div>
+        <div class="mode-arrow">→</div>
+        <div class="mode-node legacy">Legacy DB2</div>
+      </div>
+      <div class="code-block" style="margin:20px 0;">
+        <code style="font-size:0.82rem;"><span class="keyword">const</span> res = <span class="keyword">await</span> <span class="function">fetch</span>(config.<span class="special">commit_webhook_url</span>, {
+  method: <span class="string">'POST'</span>,
+  headers: {
+    <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>,
+    <span class="string">'X-Idempotency-Key'</span>: payload.resource_id
+  },
+  body: <span class="function">JSON.stringify</span>(payload)
+});</code>
+      </div>
+      <p style="color:var(--text-dim);font-size:0.9rem;">For customers with existing HTTP APIs in front of their legacy database. The <code style="color:var(--violet);font-family:var(--font-mono);font-size:0.85rem;">X-Idempotency-Key</code> header prevents duplicate commits on retry.</p>
+    </div>
+
+    <!-- RPC Mode Content -->
+    <div class="mode-content" id="rpcContent">
+      <div class="mode-diagram">
+        <div class="mode-node bridge">Bridge Worker</div>
+        <div class="mode-arrow">→</div>
+        <div class="mode-node supabase">db2.rpc()</div>
+        <div class="mode-arrow">→</div>
+        <div class="mode-node supabase">Supabase DB2</div>
+      </div>
+      <div class="code-block" style="margin:20px 0;">
+        <code style="font-size:0.82rem;"><span class="keyword">const</span> { error } = <span class="keyword">await</span> db2.<span class="function">rpc</span>(config.<span class="special">commit_rpc_name</span>, {
+  p_payload: payload
+});</code>
+      </div>
+      <p style="color:var(--text-dim);font-size:0.9rem;">Direct database function call for Supabase-native deployments. The <code style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85rem;">finalize_transaction</code> RPC handles idempotent inserts via <code style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85rem;">ON CONFLICT DO NOTHING</code>.</p>
+    </div>
+
+    <div class="callout-box violet" style="margin-top:32px;">
+      <strong>Your legacy, 20-year-old database remains completely protected.</strong> Because the engine communicates with your core database via simple webhooks or RPCs, you do not need to rewrite your complex legacy schema.
+    </div>
+
+    <div class="callout-box emerald">
+      The <code style="color:var(--violet);font-family:var(--font-mono);font-size:0.85rem;">commit_webhook_url</code> column in <code style="color:var(--cyan);font-family:var(--font-mono);font-size:0.85rem;">engine_config</code> enables legacy DB2 customers. Bridge worker logic: if webhook URL is set → HTTP POST; otherwise → <code style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85rem;">db2.rpc()</code>.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- PANEL 7: ERROR HANDLING -->
+<!-- ============================================ -->
+<section class="section" id="resilience">
+  <div class="section-inner fade-in-child">
+    <div class="section-label">06 — Resilience</div>
+    <h2 class="section-title">Error Handling &amp; Resilience</h2>
+    <p class="section-desc" style="max-width:600px;">Zero tickets lost. The system is designed so that every failure mode has a recovery path.</p>
+
+    <!-- Retry loop SVG -->
+    <div class="retry-loop-container">
+      <svg viewBox="0 0 400 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Central queue box -->
+        <rect x="130" y="20" width="140" height="50" rx="10" fill="#00d4ff0a" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="200" y="50" text-anchor="middle" fill="#00d4ff" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="12" font-weight="500">Message on Queue</text>
+
+        <!-- Worker box -->
+        <rect x="130" y="110" width="140" height="50" rx="10" fill="#ffab000a" stroke="#ffab00" stroke-width="1.5"/>
+        <text x="200" y="140" text-anchor="middle" fill="#ffab00" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="12" font-weight="500">Worker Processes</text>
+
+        <!-- Down arrow -->
+        <path d="M200 70 L200 110" stroke="#8892a4" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <polygon points="195,108 200,116 205,108" fill="#8892a4"/>
+        <text x="218" y="93" fill="#4a5568" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">read()</text>
+
+        <!-- Success path right -->
+        <path d="M270 135 L340 135 L340 195" stroke="#00e676" stroke-width="1.5"/>
+        <polygon points="335,193 340,201 345,193" fill="#00e676"/>
+        <rect x="300" y="195" width="80" height="24" rx="6" fill="#00e67615" stroke="#00e676" stroke-width="1"/>
+        <text x="340" y="211" text-anchor="middle" fill="#00e676" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">delete()</text>
+
+        <!-- Fail path left — curves back up to queue -->
+        <path d="M130 135 L60 135 L60 45 L130 45" stroke="#ff5252" stroke-width="1.5" stroke-dasharray="6 3"/>
+        <polygon points="128,40 136,45 128,50" fill="#ff5252"/>
+        <text x="36" y="93" fill="#ff5252" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9" text-anchor="middle" transform="rotate(-90, 36, 93)">timeout → retry</text>
+
+        <!-- DLQ path -->
+        <path d="M200 160 L200 195" stroke="#ff5252" stroke-width="1.5"/>
+        <polygon points="195,193 200,201 205,193" fill="#ff5252"/>
+        <rect x="145" y="195" width="110" height="24" rx="6" fill="#ff525215" stroke="#ff5252" stroke-width="1"/>
+        <text x="200" y="211" text-anchor="middle" fill="#ff5252" font-family="SF Mono, Cascadia Code, Consolas, monospace" font-size="9">DLQ (max retries)</text>
+
+        <!-- Animated retry particle -->
+        <circle r="3" fill="#ff5252" opacity="0">
+          <animateMotion dur="3s" repeatCount="indefinite" path="M130,135 L60,135 L60,45 L130,45"/>
+          <animate attributeName="opacity" values="0;1;1;1;0" dur="3s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- Animated success particle -->
+        <circle r="3" fill="#00e676" opacity="0">
+          <animateMotion dur="2s" repeatCount="indefinite" begin="1s" path="M270,135 L340,135 L340,195"/>
+          <animate attributeName="opacity" values="0;1;1;0" dur="2s" repeatCount="indefinite" begin="1s"/>
+        </circle>
+      </svg>
+    </div>
+
+    <div class="resilience-grid">
+      <div class="resilience-card">
+        <h4><span class="r-icon retry">&#x21bb;</span> Visibility Timeout Retry</h4>
+        <p>If the worker crashes during processing, the <code style="color:var(--amber);font-family:var(--font-mono);">visibility_timeout</code> (45s) expires. The message reappears on the queue automatically. The <code style="color:var(--cyan);font-family:var(--font-mono);">idempotency_key</code> prevents double-processing.</p>
+      </div>
+
+      <div class="resilience-card">
+        <h4><span class="r-icon dlq">&#x2717;</span> Dead Letter Queue</h4>
+        <p>When <code style="color:var(--coral);font-family:var(--font-mono);">read_ct &gt;= max_retries</code>, the message is routed to <code style="color:var(--coral);font-family:var(--font-mono);">intake_dlq</code>. An admin API endpoint allows replaying DLQ messages once downstream services are restored.</p>
+      </div>
+
+      <div class="resilience-card">
+        <h4><span class="r-icon db2">&#x2713;</span> DB2 Failure Resilience</h4>
+        <p>If DB2 refuses the connection, the message <strong>STAYS on DB1 queue</strong>. When DB2 recovers, the worker picks up the <code style="color:var(--amber);font-family:var(--font-mono);">validated</code> state message and skips straight to commit — no re-validation needed.</p>
+      </div>
+
+      <div class="resilience-card">
+        <h4><span class="r-icon reaper">&#x267B;</span> Slot Reaper</h4>
+        <p>Stuck <code style="color:var(--amber);font-family:var(--font-mono);">RESERVED</code> slots older than 10 minutes with no matching queue message are automatically reset to <code style="color:var(--cyan);font-family:var(--font-mono);">AVAILABLE</code>. Runs every 2 minutes via pg_cron.</p>
+      </div>
+    </div>
+
+    <!-- Error state flow -->
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-top:40px;margin-bottom:16px;color:var(--text-dim);">Error Recovery State Flow</h3>
+    <div class="error-flow">
+      <div class="ef-node state">queued</div>
+      <div class="ef-arrow">→</div>
+      <div class="ef-node error">webhook crash<br>→ timeout → retry</div>
+      <div class="ef-arrow">→</div>
+      <div class="ef-node state">validated</div>
+      <div class="ef-arrow">→</div>
+      <div class="ef-node error">DB2 crash<br>→ timeout → retry<br>(skip validation)</div>
+      <div class="ef-arrow">→</div>
+      <div class="ef-node success">committed</div>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote-block">
+      <blockquote>"Even if your payment gateway or core ledger completely crashes during the event, zero tickets or transactions are lost. The system simply pauses and retries when downstream services recover."</blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer style="text-align:center;padding:40px;color:var(--text-muted);font-family:var(--font-mono);font-size:0.8rem;position:relative;z-index:1;">
+  pg-ticketing-system &middot; Burst-to-Queue Ledger Architecture
+</footer>
+
+<script>
+// ============================================
+// COUNTER ANIMATION
+// ============================================
+let counterStarted = false;
+function animateCounter() {
+  if (counterStarted) return;
+  counterStarted = true;
+  const el = document.getElementById('heroCounter');
+  const target = 47293;
+  const duration = 3000;
+  const start = performance.now();
+
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.floor(eased * target).toLocaleString();
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+// ============================================
+// ARCHITECTURE DRAW-IN SEQUENCE
+// ============================================
+let archDrawn = false;
+function drawArchitecture() {
+  if (archDrawn) return;
+  archDrawn = true;
+
+  const svg = document.getElementById('archSvg');
+  if (!svg) return;
+
+  // Phase 1: Draw boxes, lines, and labels with staggered delays
+  svg.querySelectorAll('.arch-draw').forEach(el => {
+    const delay = parseInt(el.getAttribute('data-delay') || '0', 10);
+    setTimeout(() => el.classList.add('visible'), delay);
+  });
+
+  svg.querySelectorAll('.arch-box-stroke').forEach(el => {
+    const delay = parseInt(el.getAttribute('data-delay') || '0', 10);
+    setTimeout(() => el.classList.add('drawn'), delay);
+  });
+
+  svg.querySelectorAll('.arch-line').forEach(el => {
+    const delay = parseInt(el.getAttribute('data-delay') || '0', 10);
+    setTimeout(() => el.classList.add('drawn'), delay);
+  });
+
+  svg.querySelectorAll('.arch-glow-line').forEach(el => {
+    const delay = parseInt(el.getAttribute('data-delay') || '0', 10);
+    setTimeout(() => el.classList.add('drawn'), delay);
+  });
+
+  // Phase 2: Start particles after the full diagram is drawn
+  setTimeout(() => {
+    const pg = document.getElementById('particleGroup');
+    if (pg) pg.classList.add('running');
+
+    // Kick off SMIL animations by setting begin to "0s"
+    ['pm1','po1','pm2','po2','pm3','po3'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.beginElement();
+    });
+    // Stagger the "b" duplicates by 1s
+    setTimeout(() => {
+      ['pm1b','po1b','pm2b','po2b','pm3b','po3b'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.beginElement();
+      });
+    }, 1000);
+  }, 2800);
+}
+
+// ============================================
+// INTERSECTION OBSERVER — ENTRANCE ANIMATIONS
+// ============================================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+
+      // Trigger counter on hero
+      if (entry.target.closest('#hero')) {
+        animateCounter();
+      }
+
+      // Trigger architecture draw-in sequence
+      if (entry.target.closest('#architecture')) {
+        drawArchitecture();
+      }
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.section-inner').forEach(el => observer.observe(el));
+
+// ============================================
+// DOT NAVIGATION — ACTIVE STATE
+// ============================================
+const sections = document.querySelectorAll('.section');
+const dots = document.querySelectorAll('.dot-nav a');
+
+const navObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      dots.forEach(d => d.classList.remove('active'));
+      const active = document.querySelector(`.dot-nav a[href="#${id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { threshold: 0.4 });
+
+sections.forEach(s => navObserver.observe(s));
+
+// ============================================
+// TOGGLE: WEBHOOK / RPC
+// ============================================
+let mode = 'webhook';
+
+function setMode(m) {
+  mode = m;
+  updateToggle();
+}
+
+function toggleMode() {
+  mode = mode === 'webhook' ? 'rpc' : 'webhook';
+  updateToggle();
+}
+
+function updateToggle() {
+  const sw = document.getElementById('toggleSwitch');
+  const wLabel = document.getElementById('labelWebhook');
+  const rLabel = document.getElementById('labelRpc');
+  const wContent = document.getElementById('webhookContent');
+  const rContent = document.getElementById('rpcContent');
+
+  sw.className = 'toggle-switch ' + mode;
+  wLabel.classList.toggle('active', mode === 'webhook');
+  rLabel.classList.toggle('active', mode === 'rpc');
+  wContent.classList.toggle('active', mode === 'webhook');
+  rContent.classList.toggle('active', mode === 'rpc');
+}
+
+// ============================================
+// TIMELINE STEP ANIMATION
+// ============================================
+let timelineInterval;
+function startTimeline() {
+  const steps = document.querySelectorAll('.timeline-step');
+  let current = 0;
+
+  if (timelineInterval) clearInterval(timelineInterval);
+  timelineInterval = setInterval(() => {
+    steps.forEach(s => s.classList.remove('active'));
+    steps[current].classList.add('active');
+    current = (current + 1) % steps.length;
+  }, 1500);
+}
+
+const timelineObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) startTimeline();
+  });
+}, { threshold: 0.3 });
+
+const claimSection = document.getElementById('claim-flow');
+if (claimSection) timelineObserver.observe(claimSection);
+</script>
+</body>
 </html>

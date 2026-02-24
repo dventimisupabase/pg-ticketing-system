@@ -2,7 +2,7 @@
 
 A **Burst-to-Queue Ledger** — a high-concurrency architectural pattern that absorbs massive traffic spikes, processes business logic asynchronously, and smoothly writes finalized data to any legacy or core database.
 
-**[Live Explainer](https://dventimisupabase.github.io/pg-ticketing-system/explainer.html)**
+**[Live Explainer](https://dventimisupabase.github.io/pg-ticketing-system/)**
 
 ## What
 
@@ -65,4 +65,4 @@ The bridge worker supports two commit modes configured per pool via `engine_conf
 | `PRD.md` | Full product requirements and implementation phases |
 | `001_intake_engine_setup.sql` | Original DB1 migration (reference) |
 | `bridge_worker.ts` | Original bridge worker (reference) |
-| `explainer.html` | Interactive architecture explainer |
+| `index.html` | Interactive architecture explainer |
