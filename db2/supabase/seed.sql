@@ -1,0 +1,5 @@
+-- db2/supabase/seed.sql
+-- Confirmed tickets are created by the bridge worker.
+-- Uncomment below to seed sample data for dashboard testing:
+-- INSERT INTO confirmed_tickets (resource_id, pool_id, user_id)
+-- VALUES (gen_random_uuid(), 'demo_concert_2026', 'test_user_1');
