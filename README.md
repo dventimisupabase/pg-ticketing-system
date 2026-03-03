@@ -10,11 +10,11 @@ A production-ready reference implementation for surviving "thundering herd" even
 
 The system uses two databases connected by a serverless worker bridge:
 
-| Component | Role |
-|-----------|------|
+| Component                | Role                                                                                                                               |
+|--------------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | **DB1 — Shock Absorber** | Ephemeral Postgres with `UNLOGGED` tables and `SKIP LOCKED` queries. Absorbs the burst, drops intents into a `pgmq` message queue. |
-| **Bridge Worker** | Supabase Edge Function that drains the queue at a controlled rate, validates via webhooks, and commits to DB2. |
-| **DB2 — Core Ledger** | Your existing database. Receives only a metered stream of finalized, validated transactions. |
+| **Bridge Worker**        | Supabase Edge Function that drains the queue at a controlled rate, validates via webhooks, and commits to DB2.                     |
+| **DB2 — Core Ledger**    | Your existing database. Receives only a metered stream of finalized, validated transactions.                                       |
 
 ## Why
 
@@ -59,10 +59,10 @@ The bridge worker supports two commit modes configured per pool via `engine_conf
 
 ### Key Files
 
-| File | Description |
-|------|-------------|
-| `gemini_docs.md` | Architecture pitch and business case |
-| `PRD.md` | Full product requirements and implementation phases |
-| `001_intake_engine_setup.sql` | Original DB1 migration (reference) |
-| `bridge_worker.ts` | Original bridge worker (reference) |
-| `index.html` | Interactive architecture explainer |
+| File                          | Description                                         |
+|-------------------------------|-----------------------------------------------------|
+| `gemini_docs.md`              | Architecture pitch and business case                |
+| `PRD.md`                      | Full product requirements and implementation phases |
+| `001_intake_engine_setup.sql` | Original DB1 migration (reference)                  |
+| `bridge_worker.ts`            | Original bridge worker (reference)                  |
+| `index.html`                  | Interactive architecture explainer                  |

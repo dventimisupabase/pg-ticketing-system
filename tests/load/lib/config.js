@@ -45,16 +45,17 @@ export const claimDuration  = new Trend('claim_duration_ms', true);
 //              k6 run -e SCENARIO=ramp  shielded.js
 //              k6 run -e SCENARIO=sustained shielded.js
 const SCENARIO = __ENV.SCENARIO || 'spike';
+const CLOUD_SCALE = __ENV.CLOUD_SCALE === '1';
 
+// --- Local scenarios (default) — capped at 200 VUs for local PostgREST ---
 const SPIKE = {
   executor: 'ramping-vus',
   stages: [
-    { duration: '5s',  target: 200 },  // jump to 200 VUs (local dev ceiling; use 500+ against hosted Supabase)
-    { duration: '60s', target: 200 },  // hold
-    { duration: '5s',  target: 0 },    // ramp down
+    { duration: '5s',  target: 200 },
+    { duration: '60s', target: 200 },
+    { duration: '5s',  target: 0 },
   ],
 };
-
 const RAMP = {
   executor: 'ramping-vus',
   stages: [
@@ -65,17 +66,35 @@ const RAMP = {
     { duration: '30s', target: 0 },
   ],
 };
+const SUSTAINED = { executor: 'constant-vus', vus: 100, duration: '3m' };
 
-const SUSTAINED = {
-  executor: 'constant-vus',
-  vus: 100,
-  duration: '3m',
+// --- Cloud-scale scenarios — sized for Supabase Supavisor connection pooler ---
+const SPIKE_CLOUD = {
+  executor: 'ramping-vus',
+  stages: [
+    { duration: '5s',  target: 500 },
+    { duration: '60s', target: 500 },
+    { duration: '5s',  target: 0 },
+  ],
 };
+const RAMP_CLOUD = {
+  executor: 'ramping-vus',
+  stages: [
+    { duration: '30s', target: 100 },
+    { duration: '30s', target: 200 },
+    { duration: '30s', target: 350 },
+    { duration: '30s', target: 500 },
+    { duration: '30s', target: 0 },
+  ],
+};
+const SUSTAINED_CLOUD = { executor: 'constant-vus', vus: 300, duration: '3m' };
 
-const SCENARIOS = { spike: SPIKE, ramp: RAMP, sustained: SUSTAINED };
+const LOCAL_SCENARIOS  = { spike: SPIKE,       ramp: RAMP,       sustained: SUSTAINED       };
+const CLOUD_SCENARIOS  = { spike: SPIKE_CLOUD, ramp: RAMP_CLOUD, sustained: SUSTAINED_CLOUD };
 
 export function getScenario() {
-  const s = SCENARIOS[SCENARIO];
+  const dict = CLOUD_SCALE ? CLOUD_SCENARIOS : LOCAL_SCENARIOS;
+  const s = dict[SCENARIO];
   if (!s) throw new Error(`Unknown SCENARIO=${SCENARIO}. Use spike, ramp, or sustained.`);
   return { [SCENARIO]: s };
 }

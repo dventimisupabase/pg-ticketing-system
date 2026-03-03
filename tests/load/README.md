@@ -44,13 +44,13 @@ The CSV from the metrics poller shows `db1_queue_depth` spiking during the burst
 
 ## Scenario reference
 
-| Scenario | Pattern | Duration | Peak VUs |
-|----------|---------|----------|----------|
-| `spike` | 0 → 200 VUs instantly, hold | ~70s | 200 |
-| `ramp` | Step up 25→50→100→200 VUs | ~150s | 200 |
-| `sustained` | Flat 100 VUs | 3m | 100 |
+| Scenario | Pattern | Duration | Local peak VUs | Cloud peak VUs |
+|----------|---------|----------|----------------|----------------|
+| `spike` | 0 → peak VUs instantly, hold | ~70s | 200 | 500 |
+| `ramp` | Step up to peak VUs | ~150s | 200 | 500 |
+| `sustained` | Flat VUs | 3m | 100 | 300 |
 
-> **Note:** These VU counts are tuned for local Supabase dev (PostgREST connection ceiling ~200 VUs). For hosted Supabase, increase spike target to 500+ and sustained to 200+.
+> **Local VU limits** are set by the PostgREST connection ceiling (~200). Cloud scenarios use Supabase Supavisor connection pooling and can sustain 500+ VUs.
 
 ## What to look for
 
@@ -62,12 +62,91 @@ The CSV from the metrics poller shows `db1_queue_depth` spiking during the burst
 | `db1_queue_depth` (poller) | Spikes during burst, drains after | n/a |
 | `db2_confirmed_total` (poller) | Grows steadily after burst | Grows erratically during burst |
 
-## Running against Grafana Cloud k6
+---
 
-1. Install the k6 Cloud CLI: `k6 cloud login`
-2. Replace `k6 run` with `k6 cloud run` in the commands above
-3. Pass real DB URLs (accessible from k6 Cloud) via `-e DB1_URL=...` and `-e DB2_URL=...`
-4. Results and charts appear in https://app.k6.io
+## Running against Grafana Cloud k6 (cloud scale)
+
+### Prerequisites
+
+- Two managed Supabase projects (DB1 and DB2) with migrations applied and bridge-worker deployed
+- A [Grafana Cloud](https://grafana.com/products/cloud/) account with k6 access
+- `psql` available locally (for setup/teardown SQL)
+- k6 CLI: `brew install k6`
+
+### 1. Provision Supabase projects
+
+For each project (DB1, DB2), from their respective directories:
+
+```bash
+# Push migrations
+supabase db push --project-ref <project-ref>
+
+# Deploy bridge-worker (DB1 only)
+supabase functions deploy bridge-worker --project-ref <db1-project-ref>
+
+# Set edge function secrets (DB1 only)
+supabase secrets set --project-ref <db1-project-ref> \
+  DB2_URL=https://<db2-project-ref>.supabase.co \
+  DB2_KEY=<db2-service-role-key>
+```
+
+### 2. Get Grafana Cloud k6 API token
+
+1. Log in to [grafana.com](https://grafana.com)
+2. Go to **My Account → API Keys**
+3. Create a key with role **MetricsPublisher** (type: k6)
+4. Copy the token value
+
+### 3. Configure `.env.cloud`
+
+```bash
+cp .env.cloud.example .env.cloud
+# Edit .env.cloud with your real values
+```
+
+Required variables:
+
+| Variable | Where to find it |
+|----------|-----------------|
+| `DB1_URL` | Supabase dashboard → Project Settings → API → Project URL |
+| `DB1_KEY` | Supabase dashboard → Project Settings → API → service_role key |
+| `DB2_URL` | Same for DB2 project |
+| `DB2_KEY` | Same for DB2 project |
+| `DB1_POSTGRES_URL` | Supabase dashboard → Project Settings → Database → Transaction pooler connection string |
+| `DB2_POSTGRES_URL` | Same for DB2 project |
+| `K6_CLOUD_TOKEN` | Grafana Cloud API key (step 2 above) |
+
+### 4. Authenticate k6 CLI (one-time)
+
+```bash
+k6 cloud login --token <your-grafana-cloud-k6-api-token>
+```
+
+### 5. Run cloud tests
+
+```bash
+# Default (spike scenario)
+./tests/load/run-cloud.sh
+
+# Or choose a scenario
+./tests/load/run-cloud.sh ramp
+./tests/load/run-cloud.sh sustained
+```
+
+The script runs shielded then unshielded back-to-back, with cleanup between runs. Results appear in your [Grafana Cloud k6 dashboard](https://app.k6.io) within seconds of each run completing.
+
+### 6. Optional: metrics poller against cloud
+
+Point the metrics poller at cloud using the Transaction Pooler URLs from `.env.cloud`:
+
+```bash
+DB1_POSTGRES_URL="postgresql://postgres.<db1-ref>:<pass>@aws-0-<region>.pooler.supabase.com:6543/postgres" \
+DB2_POSTGRES_URL="postgresql://postgres.<db2-ref>:<pass>@aws-0-<region>.pooler.supabase.com:6543/postgres" \
+deno run --allow-net --allow-env tests/load/metrics-poller.ts \
+  > tests/load/results/cloud-metrics-$(date +%s).csv
+```
+
+---
 
 ## Manual teardown
 

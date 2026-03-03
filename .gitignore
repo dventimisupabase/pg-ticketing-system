@@ -1,3 +1,6 @@
+# Cloud credentials — never commit
+.env.cloud
+
 # Load test results (machine-specific, can be large)
 tests/load/results/*.json
 tests/load/results/*.txt
