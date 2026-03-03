@@ -1,6 +1,6 @@
 -- db2/supabase/tests/00001_db2_ledger.test.sql
 BEGIN;
-SELECT plan(7);
+SELECT plan(8);
 
 -- confirmed_tickets table exists
 SELECT has_table('confirmed_tickets', 'confirmed_tickets table exists');
