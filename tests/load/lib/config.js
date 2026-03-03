@@ -49,8 +49,8 @@ const SCENARIO = __ENV.SCENARIO || 'spike';
 const SPIKE = {
   executor: 'ramping-vus',
   stages: [
-    { duration: '5s',  target: 500 },  // jump to 500 VUs
-    { duration: '60s', target: 500 },  // hold
+    { duration: '5s',  target: 200 },  // jump to 200 VUs (local dev ceiling; use 500+ against hosted Supabase)
+    { duration: '60s', target: 200 },  // hold
     { duration: '5s',  target: 0 },    // ramp down
   ],
 };
@@ -58,17 +58,17 @@ const SPIKE = {
 const RAMP = {
   executor: 'ramping-vus',
   stages: [
+    { duration: '30s', target: 25 },
     { duration: '30s', target: 50 },
     { duration: '30s', target: 100 },
     { duration: '30s', target: 200 },
-    { duration: '30s', target: 500 },
     { duration: '30s', target: 0 },
   ],
 };
 
 const SUSTAINED = {
   executor: 'constant-vus',
-  vus: 200,
+  vus: 100,
   duration: '3m',
 };
 

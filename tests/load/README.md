@@ -46,9 +46,11 @@ The CSV from the metrics poller shows `db1_queue_depth` spiking during the burst
 
 | Scenario | Pattern | Duration | Peak VUs |
 |----------|---------|----------|----------|
-| `spike` | 0 → 500 VUs instantly, hold | ~70s | 500 |
-| `ramp` | Step up 50→100→200→500 VUs | ~150s | 500 |
-| `sustained` | Flat 200 VUs | 3m | 200 |
+| `spike` | 0 → 200 VUs instantly, hold | ~70s | 200 |
+| `ramp` | Step up 25→50→100→200 VUs | ~150s | 200 |
+| `sustained` | Flat 100 VUs | 3m | 100 |
+
+> **Note:** These VU counts are tuned for local Supabase dev (PostgREST connection ceiling ~200 VUs). For hosted Supabase, increase spike target to 500+ and sustained to 200+.
 
 ## What to look for
 
