@@ -1,6 +1,6 @@
 -- db1/supabase/tests/00002_intake_functions.test.sql
 BEGIN;
-SELECT plan(12);
+SELECT plan(13);
 
 -- Setup: seed config and inventory
 INSERT INTO engine_config (pool_id, batch_size, visibility_timeout_sec, max_retries, is_active)
