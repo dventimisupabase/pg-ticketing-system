@@ -1,6 +1,6 @@
 -- db1/supabase/tests/00003_intake_cron.test.sql
 BEGIN;
-SELECT plan(4);
+SELECT plan(5);
 
 -- reap_orphaned_slots function exists
 SELECT has_function('reap_orphaned_slots', 'reap_orphaned_slots function exists');
@@ -48,7 +48,7 @@ VALUES (
 );
 
 -- Enqueue a message referencing this slot
-PERFORM pgmq.send('intake_queue',
+SELECT pgmq.send('intake_queue',
     jsonb_build_object('resource_id', '00000000-0000-0000-0000-000000000002', 'pool_id', 'reap_test_pool', 'user_id', 'active_user', 'state', 'queued')
 );
 
