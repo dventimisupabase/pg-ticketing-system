@@ -31,10 +31,10 @@ SELECT is(
     'claimed slot locked_by is correct user'
 );
 
--- Message exists in intake_queue
+-- Claim no longer enqueues (sweep handles that)
 SELECT ok(
-    (SELECT (SELECT queue_length FROM pgmq.metrics('intake_queue')) > 0),
-    'claim enqueues a message in intake_queue'
+    (SELECT (SELECT queue_length FROM pgmq.metrics('intake_queue')) = 0),
+    'claim does NOT enqueue a message in intake_queue'
 );
 
 -- Returns NULL when sold out (claim all remaining slots then try again)

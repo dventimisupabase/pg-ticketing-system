@@ -10,12 +10,13 @@ INSERT INTO engine_config (pool_id, batch_size, visibility_timeout_sec, max_retr
 VALUES ('reap_test_pool', 10, 45, 3, true)
 ON CONFLICT (pool_id) DO NOTHING;
 
-INSERT INTO inventory_slots (id, pool_id, status, locked_by, locked_at)
+INSERT INTO inventory_slots (id, pool_id, status, locked_by, locked_at, queued_at)
 VALUES (
     '00000000-0000-0000-0000-000000000001'::uuid,
     'reap_test_pool',
     'RESERVED',
     'stale_user',
+    now() - interval '20 minutes',
     now() - interval '20 minutes'
 );
 
@@ -38,12 +39,13 @@ SELECT is(
 );
 
 -- A RESERVED slot with a matching queue message should NOT be reaped
-INSERT INTO inventory_slots (id, pool_id, status, locked_by, locked_at)
+INSERT INTO inventory_slots (id, pool_id, status, locked_by, locked_at, queued_at)
 VALUES (
     '00000000-0000-0000-0000-000000000002'::uuid,
     'reap_test_pool',
     'RESERVED',
     'active_user',
+    now() - interval '20 minutes',
     now() - interval '20 minutes'
 );
 

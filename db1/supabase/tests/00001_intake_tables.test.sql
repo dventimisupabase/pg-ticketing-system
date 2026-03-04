@@ -1,6 +1,6 @@
 -- db1/supabase/tests/00001_intake_tables.test.sql
 BEGIN;
-SELECT plan(19);
+SELECT plan(20);
 
 -- Extensions
 SELECT has_extension('pgmq', 'pgmq extension exists');
@@ -18,6 +18,7 @@ SELECT has_column('inventory_slots', 'pool_id', 'inventory_slots has pool_id');
 SELECT has_column('inventory_slots', 'status', 'inventory_slots has status');
 SELECT has_column('inventory_slots', 'locked_by', 'inventory_slots has locked_by');
 SELECT has_column('inventory_slots', 'locked_at', 'inventory_slots has locked_at');
+SELECT has_column('inventory_slots', 'queued_at', 'inventory_slots has queued_at');
 
 -- engine_config table
 SELECT has_table('engine_config', 'engine_config table exists');
