@@ -68,26 +68,26 @@ const RAMP = {
 };
 const SUSTAINED = { executor: 'constant-vus', vus: 100, duration: '3m' };
 
-// --- Cloud-scale scenarios — sized for Supabase Supavisor connection pooler ---
+// --- Cloud scenarios — capped at 100 VUs (Grafana Cloud k6 free tier limit) ---
 const SPIKE_CLOUD = {
   executor: 'ramping-vus',
   stages: [
-    { duration: '5s',  target: 500 },
-    { duration: '60s', target: 500 },
+    { duration: '5s',  target: 100 },
+    { duration: '60s', target: 100 },
     { duration: '5s',  target: 0 },
   ],
 };
 const RAMP_CLOUD = {
   executor: 'ramping-vus',
   stages: [
+    { duration: '30s', target: 25 },
+    { duration: '30s', target: 50 },
+    { duration: '30s', target: 75 },
     { duration: '30s', target: 100 },
-    { duration: '30s', target: 200 },
-    { duration: '30s', target: 350 },
-    { duration: '30s', target: 500 },
     { duration: '30s', target: 0 },
   ],
 };
-const SUSTAINED_CLOUD = { executor: 'constant-vus', vus: 300, duration: '3m' };
+const SUSTAINED_CLOUD = { executor: 'constant-vus', vus: 75, duration: '3m' };
 
 const LOCAL_SCENARIOS  = { spike: SPIKE,       ramp: RAMP,       sustained: SUSTAINED       };
 const CLOUD_SCENARIOS  = { spike: SPIKE_CLOUD, ramp: RAMP_CLOUD, sustained: SUSTAINED_CLOUD };

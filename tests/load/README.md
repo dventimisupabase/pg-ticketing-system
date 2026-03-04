@@ -46,11 +46,11 @@ The CSV from the metrics poller shows `db1_queue_depth` spiking during the burst
 
 | Scenario | Pattern | Duration | Local peak VUs | Cloud peak VUs |
 |----------|---------|----------|----------------|----------------|
-| `spike` | 0 → peak VUs instantly, hold | ~70s | 200 | 500 |
-| `ramp` | Step up to peak VUs | ~150s | 200 | 500 |
-| `sustained` | Flat VUs | 3m | 100 | 300 |
+| `spike` | 0 → peak VUs instantly, hold | ~70s | 200 | 100 |
+| `ramp` | Step up to peak VUs | ~150s | 200 | 100 |
+| `sustained` | Flat VUs | 3m | 100 | 75 |
 
-> **Local VU limits** are set by the PostgREST connection ceiling (~200). Cloud scenarios use Supabase Supavisor connection pooling and can sustain 500+ VUs.
+> **Local VU limits** are set by the PostgREST connection ceiling (~200). Cloud VUs are currently capped at 100 by the Grafana Cloud k6 free tier. Increase in your k6 project settings once billing is configured.
 
 ## What to look for
 
@@ -112,8 +112,6 @@ Required variables:
 | `DB1_KEY` | Supabase dashboard → Project Settings → API → service_role key |
 | `DB2_URL` | Same for DB2 project |
 | `DB2_KEY` | Same for DB2 project |
-| `DB1_POSTGRES_URL` | Supabase dashboard → Project Settings → Database → Transaction pooler connection string |
-| `DB2_POSTGRES_URL` | Same for DB2 project |
 | `K6_CLOUD_TOKEN` | Grafana Cloud API key (step 2 above) |
 
 ### 4. Authenticate k6 CLI (one-time)
