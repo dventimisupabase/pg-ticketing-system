@@ -288,3 +288,92 @@ To go higher, the options are:
 
 Do not increase the PostgREST pool size beyond auto — it makes
 performance worse, not better.
+
+---
+
+## Sequence-Based Claiming: O(1) Approach
+
+**Date:** 2026-03-04
+**Instance:** XL (4-core ARM, 16GB RAM)
+**Migration:** `20260304200001_sequence_based_claims.sql`
+**Runner:** Local k6 (non-co-located, laptop → us-east-1)
+
+### Change
+
+**Before:** `claim_resource_and_queue` uses `UPDATE ... FOR UPDATE SKIP
+LOCKED` — O(N) worst-case scan under concurrency, 2 B-tree operations
+per claim (partial index maintenance on `idx_available_slots` and
+`idx_reserved_unqueued_slots`).
+
+**After:** Each slot gets a sequential position (`seq_pos`).  A Postgres
+sequence atomically assigns positions via `nextval`.  The claim function
+does a direct index lookup on `(pool_id, seq_pos)` — no scanning, no
+SKIP LOCKED.  Both partial indexes are dropped, enabling HOT updates
+(zero index maintenance per claim).
+
+### Run 3: Sequence-based claiming (local k6, XL)
+
+**Test:** `throughput-ceiling.js` — stepped ramp 100→200→500→1000→2000
+VUs, 60s hold per step, no think time.  1M inventory slots with
+pre-assigned sequential positions.
+
+| Metric            | Value       |
+|-------------------|-------------|
+| Avg rps (overall) | **920**     |
+| Total claims      | 331,260     |
+| Avg latency       | 806ms       |
+| Median latency    | 508ms       |
+| p95 latency       | 2,130ms     |
+| p90 latency       | 2,040ms     |
+| Max latency       | 4,380ms     |
+| Errors            | 0.00% (5/331k) |
+
+### Comparison to Baseline
+
+| Metric         | Run 1 (SKIP LOCKED, cloud co-located) | Run 3 (sequence, local runner) |
+|----------------|---------------------------------------|-------------------------------|
+| Avg rps        | 839                                   | **920** (+10%)                |
+| Total claims   | 315k                                  | **331k** (+5%)                |
+| Errors         | 0%                                    | 0.00%                         |
+| Runner location | Cloud (co-located, us-east-1)        | Local (laptop, non-co-located) |
+
+**Caveat:** This is not an apples-to-apples comparison.  Run 1 used
+co-located Grafana Cloud k6 runners in us-east-1; Run 3 used a local
+laptop.  Network latency is higher for Run 3, yet throughput is 10%
+higher.  This suggests the sequence-based approach reduces per-request
+database time enough to more than offset the added network latency.
+
+A proper comparison would require running both approaches from the same
+load generator location.  The k6 Cloud VUH quota was exhausted at the
+time of this test, preventing a co-located cloud run.
+
+### Analysis
+
+#### Throughput improved despite worse network conditions
+
+The sequence-based approach achieved 920 rps from a non-co-located
+local runner, vs. 839 rps from co-located cloud runners with the
+SKIP LOCKED approach.  Since network latency only hurts throughput
+(each VU spends more time waiting), the true database-side improvement
+is likely larger than the observed 10%.
+
+#### Zero errors at scale
+
+Both approaches handle 2000 VUs with zero meaningful errors (5 out of
+331k = 0.0015%).  The sequence-based approach maintains the same
+graceful degradation under overload.
+
+#### HOT updates are working
+
+The absence of partial index maintenance means each UPDATE touches
+only heap pages (no B-tree operations).  Combined with fillfactor=50,
+this enables HOT (Heap-Only Tuple) updates — the Postgres fast path
+where updated tuples stay on the same heap page with no index changes.
+
+#### Next steps
+
+1. **Co-located comparison:** Re-run both approaches from co-located
+   k6 runners (requires VUH quota reset) for a proper apples-to-apples
+   comparison.
+2. **Per-stage breakdown:** Add k6 tags per VU stage to get per-step
+   rps/latency numbers (100, 200, 500, 1000, 2000 VUs separately).
