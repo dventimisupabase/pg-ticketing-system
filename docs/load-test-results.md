@@ -168,3 +168,123 @@ database**, not scaling compute.  Ensuring load generators (or
 application servers) are in the same AWS region as the Supabase project
 eliminated ~195ms of p95 latency — far more than any compute tier
 upgrade.
+
+---
+
+## Throughput Ceiling: Stepped VU Ramp
+
+**Date:** 2026-03-03
+**Instance:** XL (4-core ARM, 16GB RAM)
+**Test:** `throughput-ceiling.js` — stepped ramp 100→200→500→1000→2000
+VUs, 60s hold per step, no think time, co-located k6 runners in
+us-east-1 Ashburn.  1M inventory slots.
+
+The previous tests at 100 VUs showed ~425 rps with think time, leaving
+open whether that was the database ceiling or just a load-generator
+limit.  This test removes think time and pushes to 2000 VUs to find
+the true ceiling.
+
+### Run 1: Auto-configured PostgREST pool (run 6915240)
+
+| VUs  | avg rps | p95      | errors | Notes                   |
+|------|---------|----------|--------|-------------------------|
+| 100  | 973     | 156ms    | 0%     | Baseline — fast, clean  |
+| 200  | 847     | 446ms    | 0%     | Throughput drops         |
+| 500  | 906     | 887ms    | 0%     | No gain over 100 VUs    |
+| 1000 | 902     | 1,618ms  | 0%     | Same throughput, 10x p95 |
+| 2000 | 777     | 3,704ms  | 0%     | Throughput degrades      |
+
+**Overall:** 839 avg rps, 315k total claims, 0% errors.
+
+The throughput ceiling is **~950 rps**, reached at just 100 VUs.
+Adding more VUs increases latency without increasing throughput.  The
+system degrades gracefully — zero errors at any VU level, just longer
+queue times.
+
+### Run 2: PostgREST pool = 150 connections (run 6915337)
+
+To test whether the PostgREST connection pool was the bottleneck, we
+manually increased it from the auto-configured default to 150.
+
+| VUs  | avg rps | p95       | errors | Notes                    |
+|------|---------|-----------|--------|--------------------------|
+| 100  | 551     | 455ms     | —      | 43% slower than auto     |
+| 200  | 322     | 1,829ms   | —      | Catastrophic degradation |
+| 500  | 250     | 6,020ms   | —      | Throughput collapses     |
+| 1000 | 179     | 15,892ms  | —      | Near-unusable            |
+| 2000 | 851     | 13,392ms  | —      | Draining queued requests |
+
+**Overall:** 372 avg rps, 147k total claims, 33% errors (request
+timeouts at 2000 VUs).
+
+Increasing the pool made performance **dramatically worse** at every
+VU level.  150 concurrent Postgres backends overwhelmed the instance —
+too many processes competing for CPU and memory.  The auto-configured
+pool size was already well-matched to the instance capacity.
+
+### Grafana Cloud k6 Run IDs
+
+| Run ID  | Test                          | Pool    | Dashboard                                                  |
+|---------|-------------------------------|---------|------------------------------------------------------------|
+| 6915240 | throughput-ceiling (auto pool) | auto    | https://davidventimiglia.grafana.net/a/k6-app/runs/6915240 |
+| 6915337 | throughput-ceiling (pool=150)  | 150     | https://davidventimiglia.grafana.net/a/k6-app/runs/6915337 |
+
+### Analysis
+
+#### The ceiling is ~950 rps on XL
+
+With no think time and co-located runners, `claim_resource_and_queue`
+sustains ~950 rps at 100 VUs.  This is the true throughput ceiling for
+an XL instance (4-core ARM, 16GB) with the auto-configured PostgREST
+pool.  Adding VUs beyond 100 provides no additional throughput — only
+higher latency.
+
+#### The bottleneck is Postgres backend throughput, not the pool
+
+Increasing the PostgREST pool from auto to 150 halved throughput and
+introduced 33% errors.  This rules out the connection pool as the
+bottleneck and confirms the limit is the **Postgres instance itself**
+— the combined cost of index scans, row updates, and buffer pool
+management on 4 ARM cores.
+
+The auto-tuned pool size is optimal: it limits concurrency to what
+Postgres can actually handle, preventing the backend saturation we
+observed at 150.
+
+#### Graceful degradation under overload
+
+At the auto pool size, the system handled 2000 VUs with **zero
+errors** — it just slowed down.  Latency climbed from 156ms p95 (100
+VUs) to 3,704ms p95 (2000 VUs), but every request eventually
+completed.  This is the correct behavior for a shock absorber: absorb
+the burst, never drop requests.
+
+#### Updated throughput numbers
+
+| Scenario                                | rps  | p95     |
+|-----------------------------------------|------|---------|
+| 100 VUs, with think time (previous)     | ~425 | 338ms   |
+| 100 VUs, no think time (this test)      | ~950 | 156ms   |
+| 200 VUs, local loopback (reference)     | 1,836 | 241ms  |
+
+The previous 425 rps measurement was indeed load-generator-limited:
+think time capped per-VU throughput.  Without think time, the same 100
+VUs produce 2.2x the throughput.
+
+### Recommendation
+
+**~950 rps is the production ceiling** for `claim_resource_and_queue`
+on an XL Supabase instance via PostgREST.  This is sufficient for most
+burst events (a 10,000-seat venue sells out in ~10 seconds at this
+rate).
+
+To go higher, the options are:
+1. **Horizontal scaling** — multiple DB1 instances behind a load
+   balancer, each with its own inventory partition
+2. **Direct Postgres connections** — bypass PostgREST and use pgBouncer
+   or direct connections to eliminate HTTP overhead
+3. **Larger instance** — a 2XL/4XL with more cores may push the
+   ceiling proportionally
+
+Do not increase the PostgREST pool size beyond auto — it makes
+performance worse, not better.
