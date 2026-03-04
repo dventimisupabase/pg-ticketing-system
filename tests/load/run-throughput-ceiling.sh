@@ -70,6 +70,7 @@ echo "    Slot count: $SLOT_COUNT"
 echo "    Assigning sequential positions..."
 db1_post "rpc/assign_seq_positions" "return=representation" \
   '{"p_pool_id":"load_test"}'
+echo ""
 
 # --- Create/reset claim sequence ---
 echo "    Resetting claim sequence..."
