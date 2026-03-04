@@ -23,6 +23,18 @@ source "$ENV_FILE"
 : "${DB2_KEY:?DB2_KEY must be set in .env.cloud}"
 : "${K6_CLOUD_TOKEN:?K6_CLOUD_TOKEN must be set in .env.cloud}"
 
+PROJECT_ID=6883841
+
+latest_run_id() {
+  curl -sf "https://api.k6.io/cloud/v5/projects/$PROJECT_ID/test_runs" \
+    -H "Authorization: Token $K6_CLOUD_TOKEN" | \
+    python3 -c "
+import sys, json
+runs = json.load(sys.stdin)['value']
+print(sorted(runs, key=lambda r: r.get('started',''), reverse=True)[0]['id'])
+"
+}
+
 SCENARIO="${1:-spike}"
 echo "=== Cloud load test: $SCENARIO scenario ($(date)) ==="
 
@@ -77,6 +89,7 @@ k6 cloud run \
   -e DB1_URL="$DB1_URL" \
   -e DB1_KEY="$DB1_KEY" \
   "$SCRIPT_DIR/shielded.js" || SHIELDED_EXIT=$?
+SHIELDED_RUN_ID=$(latest_run_id)
 
 cleanup
 setup_db1
@@ -89,12 +102,14 @@ k6 cloud run \
   -e DB2_URL="$DB2_URL" \
   -e DB2_KEY="$DB2_KEY" \
   "$SCRIPT_DIR/unshielded.js" || UNSHIELDED_EXIT=$?
+UNSHIELDED_RUN_ID=$(latest_run_id)
 
 teardown
 
 echo ""
 echo "=== Results in Grafana Cloud k6 dashboard: https://app.k6.io ==="
-echo "    Shielded exit code  : $SHIELDED_EXIT  (0=pass, 99=thresholds crossed)"
-echo "    Unshielded exit code: $UNSHIELDED_EXIT  (99 expected — DB2 saturates under burst)"
+echo "    Shielded   : run $SHIELDED_RUN_ID   exit=$SHIELDED_EXIT  (0=pass, 99=thresholds crossed)"
+echo "    Unshielded : run $UNSHIELDED_RUN_ID  exit=$UNSHIELDED_EXIT  (99 expected — DB2 saturates)"
 echo ""
-echo "Download summaries: ./tests/load/download-results.sh"
+echo "Compare:"
+echo "    ./tests/load/download-results.sh $SHIELDED_RUN_ID $UNSHIELDED_RUN_ID shielded unshielded"
