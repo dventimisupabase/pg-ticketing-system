@@ -1614,7 +1614,7 @@ body::before {
       </div>
       <div class="timeline-step">
         <div class="step-dot cyan">3</div>
-        <div class="step-label">pgmq<br>enqueue</div>
+        <div class="step-label">Background sweep<br>enqueues slot</div>
       </div>
       <div class="timeline-step">
         <div class="step-dot amber">4</div>
@@ -1679,6 +1679,7 @@ body::before {
           <div class="schema-col"><span class="col-name">status</span><span class="col-type">slot_status</span></div>
           <div class="schema-col"><span class="col-name">locked_by</span><span class="col-type">TEXT</span></div>
           <div class="schema-col"><span class="col-name">locked_at</span><span class="col-type">TIMESTAMPTZ</span></div>
+          <div class="schema-col"><span class="col-name" style="color:var(--violet);">queued_at</span><span class="col-type" style="color:var(--violet);">TIMESTAMPTZ <span style="font-size:9px;background:var(--violet-dim);color:var(--violet);padding:1px 4px;border-radius:3px;">NEW</span></span></div>
         </div>
       </div>
 
@@ -1760,9 +1761,14 @@ body::before {
         <p>Snapshots available_slots, queue_depth, dlq_depth per pool into engine_metrics.</p>
       </div>
       <div class="cron-card">
+        <h5>sweep_reserved_to_queue</h5>
+        <div class="freq">Every 1 minute</div>
+        <p>Batch-enqueues RESERVED slots into pgmq, decoupling the fast claim path from the queue write for lower latency.</p>
+      </div>
+      <div class="cron-card">
         <h5>reap_orphaned_slots</h5>
         <div class="freq">Every 2 minutes</div>
-        <p>Resets stuck RESERVED slots (older than 10 min with no queue message) back to AVAILABLE.</p>
+        <p>Resets swept RESERVED slots (older than 10 min with no queue message) back to AVAILABLE.</p>
       </div>
       <div class="cron-card">
         <h5>drain_queue_trigger</h5>
