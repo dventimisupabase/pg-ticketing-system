@@ -70,25 +70,31 @@ teardown() {
 setup_db1
 
 echo "--- Running SHIELDED scenario (cloud scale) ---"
+SHIELDED_EXIT=0
 k6 cloud run \
   -e SCENARIO="$SCENARIO" \
   -e CLOUD_SCALE=1 \
   -e DB1_URL="$DB1_URL" \
   -e DB1_KEY="$DB1_KEY" \
-  "$SCRIPT_DIR/shielded.js"
+  "$SCRIPT_DIR/shielded.js" || SHIELDED_EXIT=$?
 
 cleanup
 setup_db1
 
 echo "--- Running UNSHIELDED scenario (cloud scale) ---"
+UNSHIELDED_EXIT=0
 k6 cloud run \
   -e SCENARIO="$SCENARIO" \
   -e CLOUD_SCALE=1 \
   -e DB2_URL="$DB2_URL" \
   -e DB2_KEY="$DB2_KEY" \
-  "$SCRIPT_DIR/unshielded.js"
+  "$SCRIPT_DIR/unshielded.js" || UNSHIELDED_EXIT=$?
 
 teardown
 
 echo ""
 echo "=== Results in Grafana Cloud k6 dashboard: https://app.k6.io ==="
+echo "    Shielded exit code  : $SHIELDED_EXIT  (0=pass, 99=thresholds crossed)"
+echo "    Unshielded exit code: $UNSHIELDED_EXIT  (99 expected — DB2 saturates under burst)"
+echo ""
+echo "Download summaries: ./tests/load/download-results.sh"
