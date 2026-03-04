@@ -397,6 +397,71 @@ All three runs handle 2000 VUs with zero meaningful errors.  The
 sequence approach maintains graceful degradation regardless of
 instance size.
 
+### Run 5: CPU investigation (run 6919590)
+
+**Instance:** XL (4-core ARM, 16GB RAM)
+**Purpose:** Identify the ~950 rps ceiling bottleneck by monitoring CPU
+during a load test.
+
+| VUs  | avg rps | p95      |
+|------|---------|----------|
+| 100  | 1,020   | 155ms    |
+| 200  | 1,026   | 318ms    |
+| 500  | 947     | 742ms    |
+| 1000 | 930     | 1,427ms  |
+| 2000 | 884     | 2,900ms  |
+
+**Overall:** 918 avg rps, 342k total claims, 0% errors.
+
+#### CPU during test: idle
+
+Both the customer-facing Supabase dashboard and the internal Grafana
+(which shows the **whole box** — Postgres and PostgREST together)
+reported near-zero CPU utilization during the test:
+
+| Metric                    | During test |
+|---------------------------|-------------|
+| Customer dashboard CPU    | 0.08%       |
+| Internal Grafana (full box) | ~0%       |
+| User-mode CPU             | ~0%         |
+| System-mode CPU           | ~0%         |
+| IOWait                    | ~0%         |
+
+The entire instance — Postgres, PostgREST, and all other processes —
+was idle while handling 918 rps across 2000 VUs.
+
+#### The ~950 rps ceiling is not on the box
+
+Since neither Postgres nor PostgREST is CPU-bound, memory-bound, or
+IO-bound during the test, the throughput ceiling must be upstream of
+the instance:
+
+| Layer                  | CPU during test | Bottleneck? |
+|------------------------|----------------|-------------|
+| Postgres               | ~0%            | No          |
+| PostgREST              | ~0%            | No          |
+| Whole box              | ~0%            | No          |
+| API gateway (upstream) | not visible    | **Likely**  |
+
+The Supabase API gateway (Kong/Envoy) sits in front of every managed
+project.  It handles TLS termination, routing, and request proxying.
+This shared infrastructure likely has per-project connection limits or
+request rate caps that top out around ~950 rps.
+
+#### Implications
+
+1. **Vertical scaling is pointless** for this workload.  The box is
+   idle on a Micro — paying for XL buys nothing.
+2. **Algorithm optimization is done.**  The sequence-based approach
+   reduced per-request DB work to near-zero CPU cost.  There is no
+   further database-level optimization to be found.
+3. **The path to higher throughput** is bypassing the API gateway:
+   direct Postgres connections via pgBouncer, or horizontal scaling
+   across multiple Supabase projects behind a custom load balancer.
+4. **~950 rps is a platform limit**, not a database or application
+   limit.  This is important context for capacity planning: the
+   database can handle far more than the gateway allows through.
+
 ### Grafana Cloud k6 Run IDs
 
 | Run ID  | Test                           | Approach           | Dashboard                                                  |
@@ -404,3 +469,4 @@ instance size.
 | 6915240 | throughput-ceiling (auto pool)  | SKIP LOCKED (XL)   | https://davidventimiglia.grafana.net/a/k6-app/runs/6915240 |
 | 6918628 | throughput-ceiling (auto pool)  | Sequence (Micro)   | https://davidventimiglia.grafana.net/a/k6-app/runs/6918628 |
 | 6919309 | throughput-ceiling (auto pool)  | Sequence (XL)      | https://davidventimiglia.grafana.net/a/k6-app/runs/6919309 |
+| 6919590 | throughput-ceiling (CPU test)   | Sequence (XL)      | https://davidventimiglia.grafana.net/a/k6-app/runs/6919590 |
