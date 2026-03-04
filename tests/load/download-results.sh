@@ -77,56 +77,52 @@ import sys, json, urllib.request
 run_id, started, ended, token = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 BASE = "https://api.k6.io/cloud/v5"
 
-def fetch(metric, query):
+def fetch_range(metric, query):
+    """Per-interval time-series (for charting)."""
     url = f"{BASE}/test_runs/{run_id}/query_range_k6(metric='{metric}',query='{query}',step=10,start={started},end={ended})"
     req = urllib.request.Request(url, headers={"Authorization": f"Token {token}"})
     try:
         with urllib.request.urlopen(req) as r:
             d = json.loads(r.read())
         results = d.get("data", {}).get("result", [])
-        if not results:
-            return []
-        return results[0].get("values", [])
-    except Exception as e:
+        return results[0].get("values", []) if results else []
+    except Exception:
         return []
 
-def summarize(values):
-    if not values:
+def fetch_aggregate(metric, query):
+    """True aggregate over the full run (matches Grafana dashboard)."""
+    url = f"{BASE}/test_runs/{run_id}/query_aggregate_k6(metric='{metric}',query='{query}',start={started},end={ended})"
+    req = urllib.request.Request(url, headers={"Authorization": f"Token {token}"})
+    try:
+        with urllib.request.urlopen(req) as r:
+            d = json.loads(r.read())
+        results = d.get("data", {}).get("result", [])
+        values = results[0].get("values", []) if results else []
+        return round(values[0][1], 3) if values else None
+    except Exception:
         return None
-    nums = [v for _, v in values]
-    nums.sort()
-    n = len(nums)
-    return {
-        "min":   round(nums[0], 3),
-        "avg":   round(sum(nums) / n, 3),
-        "p95":   round(nums[int(n * 0.95)], 3),
-        "p99":   round(nums[int(n * 0.99)], 3),
-        "max":   round(nums[-1], 3),
-        "samples": n,
-    }
 
 out = {
     "run_id": run_id,
     "http_req_duration_ms": {
-        "p95_series":    fetch("http_req_duration", "p95"),
-        "p99_series":    fetch("http_req_duration", "p99"),
-        "avg_series":    fetch("http_req_duration", "avg"),
-        "p95_summary":   summarize(fetch("http_req_duration", "p95")),
-        "p99_summary":   summarize(fetch("http_req_duration", "p99")),
+        "p95":         fetch_aggregate("http_req_duration", "p95"),
+        "p99":         fetch_aggregate("http_req_duration", "p99"),
+        "avg":         fetch_aggregate("http_req_duration", "avg"),
+        "p95_series":  fetch_range("http_req_duration", "p95"),
     },
     "http_req_failed_rate": {
-        "series":   fetch("http_req_failed", "rate"),
-        "summary":  summarize(fetch("http_req_failed", "rate")),
+        "rate":   fetch_aggregate("http_req_failed", "rate"),
+        "series": fetch_range("http_req_failed", "rate"),
     },
     "http_reqs_per_sec": {
-        "series":   fetch("http_reqs", "rate"),
-        "summary":  summarize(fetch("http_reqs", "rate")),
+        "rps_avg": fetch_aggregate("http_reqs", "rate"),
+        "total":   fetch_aggregate("http_reqs", "count"),
+        "series":  fetch_range("http_reqs", "rate"),
     },
     "claim_duration_ms": {
-        "p95_series":   fetch("claim_duration_ms", "p95"),
-        "p99_series":   fetch("claim_duration_ms", "p99"),
-        "p95_summary":  summarize(fetch("claim_duration_ms", "p95")),
-        "p99_summary":  summarize(fetch("claim_duration_ms", "p99")),
+        "p95":        fetch_aggregate("claim_duration_ms", "p95"),
+        "p99":        fetch_aggregate("claim_duration_ms", "p99"),
+        "p95_series": fetch_range("claim_duration_ms", "p95"),
     },
 }
 print(json.dumps(out, indent=2))
@@ -148,18 +144,21 @@ print(f"    Test       : {run['test_name']}  |  VUs: {run['vus']}  |  {run['star
 print(f"    URL        : {run['dashboard_url']}")
 print()
 
-def fmt(s, unit="ms"):
-    if not s: return "  n/a"
-    return (f"  avg={s['avg']:.0f}{unit}  p95={s['p95']:.0f}{unit}"
-            f"  p99={s['p99']:.0f}{unit}  max={s['max']:.0f}{unit}")
+def v(d, key, unit="ms"):
+    val = d.get(key)
+    return f"{val:.0f}{unit}" if val is not None else "n/a"
 
-print(f"    http_req_duration p95 : {fmt(ts['http_req_duration_ms']['p95_summary'])}")
-print(f"    http_req_duration p99 : {fmt(ts['http_req_duration_ms']['p99_summary'])}")
-print(f"    http_req_failed  rate : {fmt(ts['http_req_failed_rate']['summary'], unit='')}")
-print(f"    http_reqs/sec         : {fmt(ts['http_reqs_per_sec']['summary'], unit='')}")
-d = ts["claim_duration_ms"]["p95_summary"]
-if d:
-    print(f"    claim_duration_ms p95 : {fmt(d)}")
+dur = ts["http_req_duration_ms"]
+print(f"    http_req_duration     :  avg={v(dur,'avg')}  p95={v(dur,'p95')}  p99={v(dur,'p99')}")
+fail = ts["http_req_failed_rate"]
+rate = fail.get("rate")
+rate_str = f"{rate*100:.3f}%" if rate is not None else "n/a"
+print(f"    http_req_failed       :  {rate_str}")
+reqs = ts["http_reqs_per_sec"]
+print(f"    http_reqs             :  rps={v(reqs,'rps_avg','')}  total={v(reqs,'total','')}")
+cl = ts["claim_duration_ms"]
+if cl.get("p95"):
+    print(f"    claim_duration_ms     :  p95={v(cl,'p95')}  p99={v(cl,'p99')}")
 PYEOF
 }
 
@@ -182,12 +181,8 @@ ts1 = json.load(open(sys.argv[1]))
 ts2 = json.load(open(sys.argv[2]))
 l1, l2 = sys.argv[3], sys.argv[4]
 
-def val(ts, path, agg):
-    parts = path.split(".")
-    d = ts
-    for p in parts: d = d.get(p, {}) or {}
-    s = d.get(agg + "_summary") or d.get("summary")
-    return s.get(agg) if s else None
+def val(ts, section, key):
+    return ts.get(section, {}).get(key)
 
 def pct_diff(a, b):
     if a is None or b is None or a == 0: return "n/a"
@@ -198,8 +193,8 @@ def pct_diff(a, b):
 metrics = [
     ("http_req_duration p95 (ms)", "http_req_duration_ms", "p95"),
     ("http_req_duration p99 (ms)", "http_req_duration_ms", "p99"),
-    ("http_req_failed rate",       "http_req_failed_rate", "avg"),
-    ("http_reqs/sec",              "http_reqs_per_sec",    "avg"),
+    ("http_req_failed rate",       "http_req_failed_rate", "rate"),
+    ("http_reqs/sec",              "http_reqs_per_sec",    "rps_avg"),
     ("claim_duration p95 (ms)",    "claim_duration_ms",    "p95"),
 ]
 
