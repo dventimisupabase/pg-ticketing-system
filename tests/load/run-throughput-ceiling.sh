@@ -66,6 +66,16 @@ SLOT_COUNT=$(curl -sf "$DB1_URL/rest/v1/inventory_slots?pool_id=eq.load_test&sta
   -I 2>/dev/null | grep -i content-range | grep -oE '[0-9]+$' || echo "unknown")
 echo "    Slot count: $SLOT_COUNT"
 
+# --- Assign sequential positions ---
+echo "    Assigning sequential positions..."
+db1_post "rpc/assign_seq_positions" "return=representation" \
+  '{"p_pool_id":"load_test"}'
+
+# --- Create/reset claim sequence ---
+echo "    Resetting claim sequence..."
+db1_post "rpc/reset_claim_sequence" "return=minimal" \
+  '{"p_pool_id":"load_test","p_start":1}'
+
 # --- Run ---
 echo "--- Running throughput ceiling test (k6 cloud) ---"
 RUN_EXIT=0
