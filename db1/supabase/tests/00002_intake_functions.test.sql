@@ -10,6 +10,20 @@ INSERT INTO inventory_slots (pool_id, status)
 SELECT 'test_pool', 'AVAILABLE'
 FROM generate_series(1, 5);
 
+-- Assign sequential positions for sequence-based claiming
+UPDATE inventory_slots
+SET seq_pos = sub.rn
+FROM (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS rn
+    FROM inventory_slots
+    WHERE pool_id = 'test_pool'
+) sub
+WHERE inventory_slots.id = sub.id;
+
+-- Create claim sequence starting at 1
+CREATE SEQUENCE IF NOT EXISTS claim_seq_test_pool START 1;
+ALTER SEQUENCE claim_seq_test_pool RESTART WITH 1;
+
 -- claim_resource_and_queue returns a UUID when slots available
 SELECT isnt(
     claim_resource_and_queue('test_pool', 'user_1'),
