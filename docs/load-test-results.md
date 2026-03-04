@@ -327,67 +327,80 @@ positions.
 
 **Overall:** 907 avg rps, 338k total claims, 0% errors.
 
-### Comparison to Baseline (Run 1: XL + SKIP LOCKED vs Run 3: Micro + Sequence)
+### Run 4: Sequence-based claiming, XL, co-located (run 6919309)
 
-| VUs  | SKIP LOCKED rps | Sequence rps | Change | SKIP LOCKED p95 | Sequence p95 | Change  |
-|------|----------------|-------------|--------|-----------------|-------------|---------|
-| 100  | 973            | 990         | +2%    | 156ms           | 170ms       | +9%     |
-| 200  | 847            | 960         | **+13%** | 446ms         | 338ms       | **-24%** |
-| 500  | 906            | 996         | **+10%** | 887ms         | 720ms       | **-19%** |
-| 1000 | 902            | 919         | +2%    | 1,618ms         | 1,411ms     | -13%    |
-| 2000 | 777            | 867         | **+12%** | 3,704ms       | 2,853ms     | **-23%** |
-| **Overall** | **839**   | **907**     | **+8%** |               |             |         |
+**Instance:** XL (4-core ARM, 16GB RAM)
+**Test:** Same as Run 3, but on XL for apples-to-apples comparison
+with Run 1.
+
+| VUs  | avg rps | p95      | Notes                         |
+|------|---------|----------|-------------------------------|
+| 100  | 947     | 179ms    | Baseline-level throughput     |
+| 200  | 856     | 422ms    | Slight improvement vs Run 1   |
+| 500  | 950     | 664ms    | +5% rps, -25% p95 vs Run 1   |
+| 1000 | 957     | 1,308ms  | +6% rps, -19% p95 vs Run 1   |
+| 2000 | 831     | 2,893ms  | +7% rps, -22% p95 vs Run 1   |
+
+**Overall:** 878 avg rps, 328k total claims, 0% errors.
+
+### Comparison: All Three Runs
+
+| VUs  | Run 1: SKIP LOCKED (XL) | Run 3: Sequence (Micro) | Run 4: Sequence (XL) |
+|------|------------------------|------------------------|---------------------|
+| 100  | 973 / 156ms            | 990 / 170ms            | 947 / 179ms         |
+| 200  | 847 / 446ms            | 960 / 338ms            | 856 / 422ms         |
+| 500  | 906 / 887ms            | 996 / 720ms            | 950 / 664ms         |
+| 1000 | 902 / 1,618ms          | 919 / 1,411ms          | 957 / 1,308ms       |
+| 2000 | 777 / 3,704ms          | 867 / 2,853ms          | 831 / 2,893ms       |
+| **Overall** | **839 rps**     | **907 rps**            | **878 rps**         |
 
 ### Analysis
 
-#### Micro + sequence matches XL + SKIP LOCKED
+#### Sequence-based approach consistently outperforms SKIP LOCKED
 
-The sequence-based approach on a **Micro** (2-core, 1GB) achieved 907
-avg rps — matching the XL (4-core, 16GB) baseline of 839 rps with
-SKIP LOCKED.  At 100 VUs, the Micro reaches 990 rps (vs. 973 on XL).
-This means the algorithm change eliminated the need for a 4x compute
-upgrade.  More importantly, throughput stays above 900 rps up to
-1000 VUs, whereas the XL baseline dropped to 847 rps at just 200 VUs.
+Both sequence runs (Micro and XL) outperform the SKIP LOCKED baseline
+at every VU level above 100.  The improvement is most pronounced at
+high concurrency: at 1000 VUs, the XL sequence run achieves 957 rps
+vs. 902 rps for SKIP LOCKED (+6%) with p95 dropping from 1,618ms to
+1,308ms (-19%).
 
-#### Biggest gains at moderate concurrency (200-500 VUs)
+#### p95 improves because per-request cost is lower
 
-The 200 VU stage shows +13% throughput and -24% p95 — this is where
-`FOR UPDATE SKIP LOCKED` scanning hurts most.  At 200 VUs, each SKIP
-LOCKED query must scan past up to 199 locked rows.  The sequence
-approach avoids this entirely: `nextval` is O(1) and the index lookup
-on `(pool_id, seq_pos)` is O(log N).
+The sequence approach reduces per-request work: `nextval` (O(1)) +
+direct index lookup replaces scanning past locked rows (O(N) worst
+case), and HOT updates eliminate B-tree operations.  Each request
+holds its Postgres backend for less time, simultaneously reducing
+latency and increasing throughput.
 
-#### Better degradation under extreme load
+#### Micro + sequence matches or beats XL + SKIP LOCKED
 
-At 2000 VUs, the sequence approach sustains 867 rps with p95=2.9s
-(vs. 777 rps and p95=3.7s for the baseline).  Both approach zero
-errors, but the sequence approach keeps more requests flowing.
+The most striking result: a **Micro** (2-core, 1GB, $25/mo) with the
+sequence approach achieved 907 avg rps — outperforming an **XL**
+(4-core, 16GB, $150/mo) with SKIP LOCKED at 839 avg rps.  The
+algorithm change is worth more than a 6x price increase in compute.
 
-#### Zero errors maintained
+#### Scaling from Micro to XL adds modest value with sequences
 
-Both approaches handle 2000 VUs with zero errors — graceful
-degradation under overload.  The sequence approach maintains this
-property while delivering better throughput.
+Comparing Run 3 (Micro) to Run 4 (XL), both with sequences:
+- Overall throughput: 907 vs 878 rps (Micro was slightly higher —
+  likely run-to-run variance)
+- p95 at 1000 VUs: 1,411ms vs 1,308ms (XL is 7% better)
+- p95 at 500 VUs: 720ms vs 664ms (XL is 8% better)
 
-#### HOT updates confirmed
+The XL shows modestly better tail latency at high concurrency, but
+the throughput difference is within noise.  With the sequence approach,
+**Micro is sufficient** — compute scaling provides diminishing returns.
 
-The per-stage numbers confirm that dropping partial indexes and
-enabling HOT updates reduces per-claim overhead.  The effect is most
-visible at moderate concurrency where index contention was previously
-a factor.
+#### Zero errors across all configurations
 
-#### Compute tier is no longer the bottleneck
-
-The previous analysis (Run 1) concluded that the ~950 rps ceiling was
-the Postgres instance itself — "the combined cost of index scans, row
-updates, and buffer pool management on 4 ARM cores."  The sequence-
-based approach disproves this: a Micro with 2 cores and 1GB RAM
-matches or exceeds the XL's throughput.  The bottleneck was the
-algorithm (scanning + index maintenance), not the hardware.
+All three runs handle 2000 VUs with zero meaningful errors.  The
+sequence approach maintains graceful degradation regardless of
+instance size.
 
 ### Grafana Cloud k6 Run IDs
 
-| Run ID  | Test                           | Approach     | Dashboard                                                  |
-|---------|--------------------------------|--------------|------------------------------------------------------------|
-| 6915240 | throughput-ceiling (auto pool)  | SKIP LOCKED  | https://davidventimiglia.grafana.net/a/k6-app/runs/6915240 |
-| 6918628 | throughput-ceiling (auto pool)  | Sequence (Micro) | https://davidventimiglia.grafana.net/a/k6-app/runs/6918628 |
+| Run ID  | Test                           | Approach           | Dashboard                                                  |
+|---------|--------------------------------|--------------------|------------------------------------------------------------|
+| 6915240 | throughput-ceiling (auto pool)  | SKIP LOCKED (XL)   | https://davidventimiglia.grafana.net/a/k6-app/runs/6915240 |
+| 6918628 | throughput-ceiling (auto pool)  | Sequence (Micro)   | https://davidventimiglia.grafana.net/a/k6-app/runs/6918628 |
+| 6919309 | throughput-ceiling (auto pool)  | Sequence (XL)      | https://davidventimiglia.grafana.net/a/k6-app/runs/6919309 |
