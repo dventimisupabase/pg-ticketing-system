@@ -294,9 +294,8 @@ performance worse, not better.
 ## Sequence-Based Claiming: O(1) Approach
 
 **Date:** 2026-03-04
-**Instance:** XL (4-core ARM, 16GB RAM)
+**Instance:** Micro (2-core ARM, 1GB RAM)
 **Migration:** `20260304200001_sequence_based_claims.sql`
-**Runner:** Local k6 (non-co-located, laptop → us-east-1)
 
 ### Change
 
@@ -328,7 +327,7 @@ positions.
 
 **Overall:** 907 avg rps, 338k total claims, 0% errors.
 
-### Comparison to Baseline (Run 1 vs Run 3, both co-located, XL)
+### Comparison to Baseline (Run 1: XL + SKIP LOCKED vs Run 3: Micro + Sequence)
 
 | VUs  | SKIP LOCKED rps | Sequence rps | Change | SKIP LOCKED p95 | Sequence p95 | Change  |
 |------|----------------|-------------|--------|-----------------|-------------|---------|
@@ -341,13 +340,14 @@ positions.
 
 ### Analysis
 
-#### Throughput ceiling raised from ~950 to ~1000 rps
+#### Micro + sequence matches XL + SKIP LOCKED
 
-At 100 VUs, the sequence-based approach reaches 990 rps (vs. 973
-baseline).  More importantly, throughput stays above 900 rps up to
-1000 VUs, whereas the baseline dropped to 847 rps at just 200 VUs.
-The sequence approach maintains near-peak throughput across a much
-wider range of concurrency.
+The sequence-based approach on a **Micro** (2-core, 1GB) achieved 907
+avg rps — matching the XL (4-core, 16GB) baseline of 839 rps with
+SKIP LOCKED.  At 100 VUs, the Micro reaches 990 rps (vs. 973 on XL).
+This means the algorithm change eliminated the need for a 4x compute
+upgrade.  More importantly, throughput stays above 900 rps up to
+1000 VUs, whereas the XL baseline dropped to 847 rps at just 200 VUs.
 
 #### Biggest gains at moderate concurrency (200-500 VUs)
 
@@ -376,9 +376,18 @@ enabling HOT updates reduces per-claim overhead.  The effect is most
 visible at moderate concurrency where index contention was previously
 a factor.
 
+#### Compute tier is no longer the bottleneck
+
+The previous analysis (Run 1) concluded that the ~950 rps ceiling was
+the Postgres instance itself — "the combined cost of index scans, row
+updates, and buffer pool management on 4 ARM cores."  The sequence-
+based approach disproves this: a Micro with 2 cores and 1GB RAM
+matches or exceeds the XL's throughput.  The bottleneck was the
+algorithm (scanning + index maintenance), not the hardware.
+
 ### Grafana Cloud k6 Run IDs
 
 | Run ID  | Test                           | Approach     | Dashboard                                                  |
 |---------|--------------------------------|--------------|------------------------------------------------------------|
 | 6915240 | throughput-ceiling (auto pool)  | SKIP LOCKED  | https://davidventimiglia.grafana.net/a/k6-app/runs/6915240 |
-| 6918628 | throughput-ceiling (auto pool)  | Sequence     | https://davidventimiglia.grafana.net/a/k6-app/runs/6918628 |
+| 6918628 | throughput-ceiling (auto pool)  | Sequence (Micro) | https://davidventimiglia.grafana.net/a/k6-app/runs/6918628 |
