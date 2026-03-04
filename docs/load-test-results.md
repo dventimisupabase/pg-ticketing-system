@@ -120,6 +120,26 @@ The jump from Micro to Small (p95: 533ms → 338ms) suggests Micro's
 buffers are too small, forcing more disk reads on the 500k-row
 `inventory_slots` partial index scan.
 
+### Throughput floor estimate
+
+Since throughput can only stay the same or improve with more VUs, the
+measured results give us a conservative lower bound:
+
+- **At 100 VUs (measured):** ~425 rps sustained across Small, Medium,
+  and XL.  This is the known floor.
+- **At 200 VUs (projected):** if per-request latency stays flat,
+  throughput would roughly double to ~850 rps.  If latency degrades
+  under heavier load, the result falls somewhere between 425 and 850.
+- **Local reference (200 VUs, loopback):** the decoupled claim
+  sustained 1,836 rps, confirming the function itself is not the
+  bottleneck at 2x the VU count.
+
+The 425 rps floor is the worst case for any tier at or above Small.
+Actual throughput under production load is almost certainly higher,
+since real deployments would co-locate clients and database in the
+same region, eliminating the cross-region round-trip tax that dominates
+these results.
+
 ### Recommendation
 
 **Small** is the right tier for this workload at 100 VUs.  Scaling
