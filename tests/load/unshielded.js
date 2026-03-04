@@ -7,12 +7,13 @@ import { check, sleep } from 'k6';
 import {
   DB2_URL, DB2_HEADERS, POOL_ID,
   uuidv4, claimDuration,
-  getScenario, THRESHOLDS,
+  getScenario, THRESHOLDS, CLOUD_OPTIONS,
 } from './lib/config.js';
 
 export const options = {
   scenarios: getScenario(),
   thresholds: THRESHOLDS,
+  cloud: CLOUD_OPTIONS,
 };
 
 export default function () {

@@ -105,3 +105,9 @@ export const THRESHOLDS = {
   http_req_failed:   ['rate<0.01'],   // <1% HTTP errors (5xx, network failures)
   http_req_duration: ['p(95)<500'],   // p95 under 500ms (generous; we're measuring shape, not absolute)
 };
+
+// --- Cloud options ---
+// Pin load generators to us-east-1 (Ashburn) to co-locate with Supabase project.
+export const CLOUD_OPTIONS = CLOUD_SCALE
+  ? { distribution: { ashburn: { loadZone: 'amazon:us:ashburn', percent: 100 } } }
+  : {};
