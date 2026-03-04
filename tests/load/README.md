@@ -52,6 +52,28 @@ The CSV from the metrics poller shows `db1_queue_depth` spiking during the burst
 
 > **Local VU limits** are set by the PostgREST connection ceiling (~200). Cloud VUs are currently capped at 100 by the Grafana Cloud k6 free tier. Increase in your k6 project settings once billing is configured.
 
+## Throughput ceiling test
+
+Finds the maximum rps of `claim_resource_and_queue` on managed Supabase by stepping VUs from 100 to 2000.
+
+**Requires:** Paid Grafana Cloud k6 (>100 VU limit), `.env.cloud` configured.
+
+```bash
+./tests/load/run-throughput-ceiling.sh
+```
+
+Seeds 1M slots, runs a stepped ramp (100→200→500→1000→2000 VUs, 60s hold per step), tears down. Total duration ~6 minutes.
+
+No think time — each VU fires as fast as the server responds. The saturation point is where rps stops growing with more VUs.
+
+| Step | VUs  | Duration |
+|------|------|----------|
+| 1    | 100  | 60s hold |
+| 2    | 200  | 60s hold |
+| 3    | 500  | 60s hold |
+| 4    | 1000 | 60s hold |
+| 5    | 2000 | 60s hold |
+
 ## What to look for
 
 | Metric | Shielded (DB1) | Unshielded (DB2) |
