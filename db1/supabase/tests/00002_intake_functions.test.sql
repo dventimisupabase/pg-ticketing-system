@@ -1,6 +1,6 @@
 -- db1/supabase/tests/00002_intake_functions.test.sql
 BEGIN;
-SELECT plan(13);
+SELECT plan(17);
 
 -- Setup: seed config and inventory
 INSERT INTO engine_config (pool_id, batch_size, visibility_timeout_sec, max_retries, is_active)
@@ -61,6 +61,34 @@ SELECT is(
     claim_resource_and_queue('test_pool', 'user_overflow'),
     NULL,
     'claim returns NULL when sold out'
+);
+
+-- unclaim_slot releases slots back to AVAILABLE
+SELECT is(
+    unclaim_slot('test_pool', 'user_1'),
+    1,
+    'unclaim_slot returns count of released slots'
+);
+
+SELECT is(
+    (SELECT status FROM inventory_slots WHERE locked_by IS NULL AND seq_pos = 1 LIMIT 1),
+    'AVAILABLE'::slot_status,
+    'unclaimed slot status is AVAILABLE'
+);
+
+-- unclaim_slot returns 0 when nothing to unclaim
+SELECT is(
+    unclaim_slot('test_pool', 'user_nonexistent'),
+    0,
+    'unclaim_slot returns 0 when no slots to unclaim'
+);
+
+-- SKIP LOCKED fallback: sequence is past all 5 slots, but slot 1 is AVAILABLE
+-- (unclaimed above). The next claim should fall back to SKIP LOCKED and find it.
+SELECT isnt(
+    claim_resource_and_queue('test_pool', 'user_fallback'),
+    NULL,
+    'claim fallback finds recycled slot via SKIP LOCKED'
 );
 
 -- RPC wrappers exist
