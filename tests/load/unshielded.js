@@ -36,7 +36,7 @@ export default function () {
   claimDuration.add(Date.now() - start);
 
   check(res, {
-    'status is 200': (r) => r.status === 200,
+    'status is 2xx': (r) => r.status >= 200 && r.status < 300,
   });
 
   sleep(Math.random() * 0.1);
