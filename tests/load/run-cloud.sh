@@ -64,6 +64,10 @@ setup_db1() {
     printf "    %d/50\r" "$i"
   done
   echo ""
+
+  echo "    Creating claim sequence..."
+  db1_post "rpc/reset_claim_sequence" "return=minimal" \
+    '{"p_pool_id":"load_test","p_start":1}'
 }
 
 cleanup() {
