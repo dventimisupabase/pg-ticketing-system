@@ -470,3 +470,75 @@ request rate caps that top out around ~950 rps.
 | 6918628 | throughput-ceiling (auto pool)  | Sequence (Micro)   | https://davidventimiglia.grafana.net/a/k6-app/runs/6918628 |
 | 6919309 | throughput-ceiling (auto pool)  | Sequence (XL)      | https://davidventimiglia.grafana.net/a/k6-app/runs/6919309 |
 | 6919590 | throughput-ceiling (CPU test)   | Sequence (XL)      | https://davidventimiglia.grafana.net/a/k6-app/runs/6919590 |
+
+---
+
+## Run 6: Shielded vs Unshielded — 500 VU Cloud Spike
+
+**Date:** 2026-03-05
+**Instance:** Micro (2-core ARM, 1GB RAM) — both DB1 and DB2
+**Test:** `shielded.js` vs `unshielded.js` — spike scenario, 500 VUs,
+70s duration (5s ramp → 60s hold → 5s ramp-down), 10ms fixed think
+time, Grafana Cloud k6 runners (pay-as-you-go), co-located in
+us-east-1 Ashburn.  500k inventory slots on DB1.
+
+This is the first head-to-head comparison of the **shielded** path
+(burst → DB1 claim → background bridge → DB2) against the
+**unshielded** path (burst → DB2 directly) under identical conditions.
+
+### Results
+
+| Path       | avg   | p95     | p99     | rps | total  | errors |
+|------------|-------|---------|---------|-----|--------|--------|
+| Shielded   | 566ms | 991ms   | 2,073ms | 691 | 56,626 | 0%     |
+| Unshielded | 906ms | 3,408ms | 5,997ms | 440 | 36,084 | 10.7%  |
+
+### Grafana Cloud k6 Run IDs
+
+| Run ID  | Test        | Dashboard                                                  |
+|---------|-------------|------------------------------------------------------------|
+| 6930457 | shielded    | https://davidventimiglia.grafana.net/a/k6-app/runs/6930457 |
+| 6930467 | unshielded  | https://davidventimiglia.grafana.net/a/k6-app/runs/6930467 |
+
+### Analysis
+
+#### DB1 absorbs the burst; DB2 cannot
+
+At 500 VUs, DB1 handled every request with zero errors.  DB2 dropped
+10.7% of requests — over 1 in 10 users would have failed to get a
+ticket.  This is the core value proposition of the burst-to-queue
+architecture: the ephemeral intake engine absorbs load spikes that
+would break the permanent ledger.
+
+#### 3.4x p95 gap
+
+Shielded p95 was 991ms vs unshielded p95 of 3,408ms — a 3.4x
+difference.  The gap widens further at p99: 2,073ms vs 5,997ms (2.9x).
+Under burst conditions, users hitting DB1 get sub-second responses
+while users hitting DB2 directly wait 3-6 seconds — if they get a
+response at all.
+
+#### 57% more throughput
+
+The shielded path sustained 691 rps vs 440 rps unshielded — 57% higher
+throughput.  This translates directly to tickets sold: in 60 seconds
+of burst, DB1 processed 56,626 claims while DB2 managed only 36,084
+(and 10.7% of those were errors).
+
+#### Both on Micro instances
+
+Both DB1 and DB2 are Micro instances (2-core ARM, 1GB RAM, $25/mo).
+The shielded path's advantage comes entirely from the architecture —
+the sequence-based `claim_resource_and_queue` function is cheaper per
+request than `finalize_transaction`'s full INSERT + conflict handling.
+No additional compute spend is required to get the burst-absorption
+benefit.
+
+#### Previous runs underestimated the gap
+
+Earlier tests (Runs 1-5) tested DB1 and DB2 independently at lower
+concurrency (100 VUs).  At 100 VUs, both paths performed acceptably.
+At 500 VUs, the difference becomes dramatic: the permanent database
+starts dropping requests while the ephemeral intake engine stays clean.
+Burst tolerance is the point of the architecture, and it only becomes
+visible under burst conditions.
