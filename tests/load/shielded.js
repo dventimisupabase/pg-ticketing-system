@@ -36,6 +36,5 @@ export default function () {
     soldOutCounter.add(1);
   }
 
-  // Small think time to avoid saturating the local network stack.
-  sleep(Math.random() * 0.1);
+  sleep(0.01);
 }

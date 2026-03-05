@@ -39,5 +39,5 @@ export default function () {
     'status is 2xx': (r) => r.status >= 200 && r.status < 300,
   });
 
-  sleep(Math.random() * 0.1);
+  sleep(0.01);
 }
