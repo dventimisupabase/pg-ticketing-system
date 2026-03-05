@@ -1,7 +1,7 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 export function createDb1Client() {
-  return createBrowserClient(
+  return createClient(
     process.env.NEXT_PUBLIC_DB1_URL!,
     process.env.NEXT_PUBLIC_DB1_ANON_KEY!
   )
