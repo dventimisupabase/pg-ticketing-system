@@ -7,8 +7,8 @@ import { CartProvider } from '@/lib/cart-context'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Ticket Marketplace',
-  description: 'Burst-to-Queue Ledger demo — a ticket marketplace powered by Supabase',
+  title: 'SupaTickets',
+  description: 'SupaTickets — a ticket marketplace demo powered by Supabase',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

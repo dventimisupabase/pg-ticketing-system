@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import type { Order, OrderItem } from '@/types/database'
 
 export default async function AccountPage() {
@@ -36,7 +37,10 @@ export default async function AccountPage() {
               {order.order_items.map((item) => (
                 <div key={item.id} className="flex justify-between text-sm">
                   <span className="text-zinc-300">
-                    {item.event?.name} — {item.ticket_count} ticket{item.ticket_count > 1 ? 's' : ''}
+                    <Link href={`/event/${item.event_id}`} className="text-cyan-400 hover:underline">
+                      {item.event?.name}
+                    </Link>
+                    {' '}— {item.ticket_count} ticket{item.ticket_count > 1 ? 's' : ''}
                   </span>
                   <span className="text-zinc-400">${(item.unit_price * item.ticket_count).toFixed(2)}</span>
                 </div>

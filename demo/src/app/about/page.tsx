@@ -5,7 +5,7 @@ export default function AboutPage() {
 
       <div className="space-y-4 text-zinc-300 leading-relaxed">
         <p>
-          This is a demo ticket marketplace built on{' '}
+          SupaTickets is a demo ticket marketplace built on{' '}
           <a href="https://supabase.com" className="text-cyan-400 hover:underline" target="_blank" rel="noopener noreferrer">
             Supabase
           </a>

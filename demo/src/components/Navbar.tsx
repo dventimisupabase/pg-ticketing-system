@@ -54,7 +54,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg font-bold text-white">Tickets</Link>
+          <Link href="/" className="text-lg font-bold text-white">SupaTickets</Link>
           <Link href="/" className="text-sm text-zinc-400 hover:text-white">Home</Link>
           <Link href="/about" className="text-sm text-zinc-400 hover:text-white">About</Link>
         </div>
