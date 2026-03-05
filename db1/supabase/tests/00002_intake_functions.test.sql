@@ -1,6 +1,6 @@
 -- db1/supabase/tests/00002_intake_functions.test.sql
 BEGIN;
-SELECT plan(17);
+SELECT plan(19);
 
 -- Setup: seed config and inventory
 INSERT INTO engine_config (pool_id, batch_size, visibility_timeout_sec, max_retries, is_active)
@@ -124,6 +124,16 @@ END $$;
 SELECT ok(
     (SELECT (SELECT queue_length FROM pgmq.metrics('intake_dlq')) > 0),
     'intake_route_to_dlq routes message to intake_dlq'
+);
+
+-- get_latest_metrics function exists
+SELECT has_function('get_latest_metrics', 'get_latest_metrics function exists');
+
+-- get_latest_metrics returns rows after snapshot
+SELECT snapshot_engine_metrics();
+SELECT ok(
+    (SELECT COUNT(*) > 0 FROM get_latest_metrics()),
+    'get_latest_metrics returns rows after snapshot'
 );
 
 SELECT finish();
