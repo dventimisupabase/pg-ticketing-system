@@ -56,7 +56,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-bold text-white">SupaTickets</Link>
           <Link href="/" className="text-sm text-zinc-400 hover:text-white">Home</Link>
-          <Link href="/about" className="text-sm text-zinc-400 hover:text-white">About</Link>
+          <a href="https://dventimisupabase.github.io/pg-ticketing-system/" className="text-sm text-zinc-400 hover:text-white" target="_blank" rel="noopener noreferrer">About</a>
         </div>
 
         <div className="flex items-center gap-4">
