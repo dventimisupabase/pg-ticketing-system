@@ -206,6 +206,78 @@
     @media (max-width: 700px) {
       .arch-steps { flex-direction: column; }
     }
+
+    /* ── Results Section ──────────────────────────────────── */
+    #results { gap: 2rem; }
+
+    .results-container { display: flex; flex-direction: column; gap: 3rem; max-width: 900px; width: 100%; }
+
+    .result-panel {
+      background: rgba(15, 21, 56, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .result-panel h3 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+    }
+
+    .result-panel svg { max-width: 100%; height: auto; }
+
+    .bar {
+      transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Punchline cards */
+    .punchline-cards { display: flex; gap: 2rem; justify-content: center; align-items: center; }
+    .punchline-card {
+      padding: 2rem;
+      border-radius: 12px;
+      text-align: center;
+      flex: 1;
+      max-width: 250px;
+    }
+    .punchline-card.blue { border: 2px solid var(--blue); background: rgba(59, 130, 246, 0.08); }
+    .punchline-card.amber { border: 2px solid var(--amber); background: rgba(245, 158, 11, 0.08); }
+    .punchline-card .tier { font-size: 1.5rem; font-weight: 800; }
+    .punchline-card .price { color: var(--text-muted); margin: 0.25rem 0; }
+    .punchline-card .method { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .punchline-card .rps { font-size: 2rem; font-weight: 800; }
+    .punchline-card.blue .rps { color: var(--blue-glow); }
+    .punchline-card.amber .rps { color: var(--amber-glow); }
+
+    .vs-symbol {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+    /* Optimization journey rows */
+    .opt-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .opt-row .label { font-weight: 700; min-width: 130px; }
+    .opt-row .metrics { color: var(--text-muted); flex: 1; }
+    .opt-row .opt-bar-container { width: 120px; height: 8px; background: rgba(148, 163, 184, 0.15); border-radius: 4px; overflow: hidden; }
+    .opt-row .opt-bar { height: 100%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1); width: 0; }
+    .opt-arrow { text-align: center; color: var(--green); font-size: 0.85rem; font-weight: 600; padding: 0.5rem 0; }
+
+    .results-subtitle { color: var(--text-muted); max-width: 700px; text-align: center; }
+
+    @media (max-width: 700px) {
+      .punchline-cards { flex-direction: column; align-items: center; }
+      .punchline-card { max-width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -428,7 +500,107 @@
     </div>
   </section>
 
-  <section id="results" class="section"></section>
+  <section id="results" class="section">
+    <h2 style="font-weight:800; color:var(--text); text-align:center;">Don't take our word for it.</h2>
+    <p class="results-subtitle">Real load test results from Grafana Cloud k6, co-located in AWS us-east-1.</p>
+
+    <div class="results-container">
+
+      <!-- Panel 1: Shielded vs Unshielded -->
+      <div class="result-panel">
+        <h3>500 Concurrent Users: Shielded vs Unshielded</h3>
+        <svg viewBox="0 0 600 280" role="img" aria-label="Shielded vs unshielded bar chart comparison">
+          <!-- Legend -->
+          <rect x="160" y="10" width="16" height="16" rx="3" fill="var(--blue)" />
+          <text x="182" y="23" fill="var(--text)" font-size="13" font-family="Inter, sans-serif">Shielded</text>
+          <rect x="340" y="10" width="16" height="16" rx="3" fill="var(--amber)" />
+          <text x="362" y="23" fill="var(--text)" font-size="13" font-family="Inter, sans-serif">Unshielded</text>
+
+          <!-- Throughput -->
+          <text x="10" y="65" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter, sans-serif">Throughput</text>
+          <rect class="bar" x="130" y="48" width="0" data-width="380" height="22" rx="4" fill="var(--blue)" />
+          <text class="bar-label" x="520" y="64" fill="var(--blue-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">691 rps</text>
+          <rect class="bar" x="130" y="76" width="0" data-width="242" height="22" rx="4" fill="var(--amber)" />
+          <text class="bar-label" x="382" y="92" fill="var(--amber-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">440 rps</text>
+
+          <!-- p95 Latency -->
+          <text x="10" y="145" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter, sans-serif">p95 Latency</text>
+          <rect class="bar" x="130" y="128" width="0" data-width="110" height="22" rx="4" fill="var(--blue)" />
+          <text class="bar-label" x="250" y="144" fill="var(--blue-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">991ms</text>
+          <rect class="bar" x="130" y="156" width="0" data-width="380" height="22" rx="4" fill="var(--amber)" />
+          <text class="bar-label" x="520" y="172" fill="var(--amber-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">3,408ms</text>
+
+          <!-- Error Rate -->
+          <text x="10" y="225" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter, sans-serif">Error Rate</text>
+          <rect class="bar" x="130" y="208" width="0" data-width="8" height="22" rx="4" fill="var(--green)" />
+          <text class="bar-label" x="148" y="224" fill="var(--green)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">0%</text>
+          <rect class="bar" x="130" y="236" width="0" data-width="380" height="22" rx="4" fill="var(--red)" />
+          <text class="bar-label" x="520" y="252" fill="var(--red)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">10.7%</text>
+        </svg>
+      </div>
+
+      <!-- Panel 2: The Optimization Path -->
+      <div class="result-panel">
+        <h3>The Optimization Path</h3>
+
+        <div class="opt-row" style="background: rgba(245, 158, 11, 0.08);">
+          <div class="label">Coupled</div>
+          <div class="metrics">1,113 rps / 105ms median</div>
+          <div class="opt-bar-container">
+            <div class="opt-bar" data-width="60" style="background: var(--amber);"></div>
+          </div>
+        </div>
+
+        <div class="opt-arrow">&#x2193; &minus;90% latency, +65% throughput</div>
+
+        <div class="opt-row" style="background: rgba(148, 163, 184, 0.06);">
+          <div class="label">Decoupled</div>
+          <div class="metrics">1,836 rps / 10ms median</div>
+          <div class="opt-bar-container">
+            <div class="opt-bar" data-width="100" style="background: var(--blue);"></div>
+          </div>
+        </div>
+
+        <div class="opt-arrow">&#x2193; O(1) claims, HOT updates</div>
+
+        <div class="opt-row" style="background: rgba(59, 130, 246, 0.08);">
+          <div class="label">Sequence-based</div>
+          <div class="metrics">950 rps cloud / ~0% CPU</div>
+          <div class="opt-bar-container">
+            <div class="opt-bar" data-width="52" style="background: var(--blue-glow);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Algorithm beats hardware -->
+      <div class="result-panel">
+        <h3>Algorithm beats hardware</h3>
+
+        <div class="punchline-cards">
+          <div class="punchline-card blue">
+            <div class="tier">Micro</div>
+            <div class="price">$25/mo</div>
+            <div class="method">Sequence-based</div>
+            <div class="rps">907 rps</div>
+          </div>
+
+          <div class="vs-symbol">&gt;</div>
+
+          <div class="punchline-card amber">
+            <div class="tier">XL</div>
+            <div class="price">$150/mo</div>
+            <div class="method">SKIP LOCKED</div>
+            <div class="rps">839 rps</div>
+          </div>
+        </div>
+
+        <p style="text-align:center; color:var(--text-muted); margin-top:1.5rem; font-size:0.95rem;">
+          Smart algorithms on cheap hardware outperform brute-force compute scaling.
+        </p>
+      </div>
+
+    </div>
+  </section>
 
   <section id="footer" class="section"></section>
 
@@ -870,12 +1042,75 @@
       }
     }
 
+    // ── ResultsAnimation ──────────────────────────────────
+    class ResultsAnimation {
+      constructor() {
+        this.bars = document.querySelectorAll('#results .bar');
+        this.barLabels = document.querySelectorAll('#results .bar-label');
+        this.optBars = document.querySelectorAll('#results .opt-bar');
+        this.panels = document.querySelectorAll('#results .result-panel');
+      }
+
+      enter() {
+        // Animate SVG bars to their target widths
+        this.bars.forEach((bar, i) => {
+          const targetWidth = bar.getAttribute('data-width');
+          setTimeout(() => {
+            bar.setAttribute('width', targetWidth);
+          }, 50);
+        });
+
+        // Fade in bar labels
+        this.barLabels.forEach(label => {
+          setTimeout(() => {
+            label.setAttribute('opacity', '1');
+          }, 800);
+        });
+
+        // Animate optimization path bars
+        this.optBars.forEach(bar => {
+          const targetWidth = bar.getAttribute('data-width');
+          setTimeout(() => {
+            bar.style.width = targetWidth + '%';
+          }, 50);
+        });
+
+        // Add visible class to panels
+        this.panels.forEach(panel => {
+          panel.classList.add('visible');
+        });
+      }
+
+      leave() {
+        // Reset SVG bar widths to 0
+        this.bars.forEach(bar => {
+          bar.setAttribute('width', '0');
+        });
+
+        // Hide bar labels
+        this.barLabels.forEach(label => {
+          label.setAttribute('opacity', '0');
+        });
+
+        // Reset optimization path bars
+        this.optBars.forEach(bar => {
+          bar.style.width = '0';
+        });
+
+        // Remove visible class from panels
+        this.panels.forEach(panel => {
+          panel.classList.remove('visible');
+        });
+      }
+    }
+
     // Start hero immediately on page load
     new HeroAnimation();
 
     // Wire up scroll-triggered animations
     const problemAnim = new ProblemAnimation();
     const archAnim = new ArchitectureAnimation();
+    const resultsAnim = new ResultsAnimation();
     new ScrollAnimator({
       problem: {
         enter: () => problemAnim.enter(),
@@ -884,6 +1119,10 @@
       architecture: {
         enter: () => archAnim.enter(),
         leave: () => archAnim.leave()
+      },
+      results: {
+        enter: () => resultsAnim.enter(),
+        leave: () => resultsAnim.leave()
       }
     });
   </script>
