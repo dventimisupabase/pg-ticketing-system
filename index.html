@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Burst-to-Queue Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     /* ── Custom Properties ─────────────────────────────────── */
     :root {
@@ -34,14 +37,15 @@
     body {
       background: var(--bg-dark);
       color: var(--text);
-      font-family: "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: "DM Sans", sans-serif;
       line-height: 1.6;
     }
 
     /* ── Responsive Font Sizing ────────────────────────────── */
-    h1 { font-size: clamp(2rem, 5vw, 4rem); }
-    h2 { font-size: clamp(1.5rem, 3.5vw, 2.75rem); }
-    h3 { font-size: clamp(1.25rem, 2.5vw, 2rem); }
+    h1, h2 { font-family: "Instrument Serif", Georgia, serif; }
+    h1 { font-size: clamp(2.5rem, 6vw, 5rem); letter-spacing: -0.02em; }
+    h2 { font-size: clamp(1.75rem, 4vw, 3.25rem); letter-spacing: -0.01em; }
+    h3 { font-size: clamp(1.25rem, 2.5vw, 2rem); font-family: "DM Sans", sans-serif; }
     p  { font-size: clamp(1rem, 1.5vw, 1.25rem); }
 
     /* ── Section Layout ────────────────────────────────────── */
@@ -54,12 +58,34 @@
       padding: clamp(2rem, 5vw, 6rem) clamp(1rem, 4vw, 4rem);
     }
 
+    /* ── Grain Overlay ──────────────────────────────────────── */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 256px 256px;
+    }
+
     /* ── Alternating Backgrounds ───────────────────────────── */
-    #hero        { background: var(--bg-dark); }
-    #problem     { background: var(--bg-section); }
-    #architecture { background: var(--bg-dark); }
-    #results     { background: var(--bg-section); }
-    #footer      { background: var(--bg-dark); }
+    #hero {
+      background: var(--bg-dark);
+      background-image:
+        radial-gradient(ellipse 60% 50% at 20% 60%, rgba(59, 130, 246, 0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 40%, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+    }
+    #problem { background: var(--bg-section); }
+    #architecture {
+      background: var(--bg-dark);
+      background-image:
+        radial-gradient(ellipse 40% 50% at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+    }
+    #results { background: var(--bg-section); }
+    #footer  { background: var(--bg-dark); }
 
     /* ── Hero Section ────────────────────────────────────────── */
     #hero {
@@ -68,18 +94,21 @@
     }
 
     .hero-headline {
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--blue), var(--blue-glow), var(--amber));
+      font-weight: 400;
+      font-style: italic;
+      background: linear-gradient(135deg, var(--blue-glow) 0%, #e2e8f0 40%, var(--amber-glow) 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       text-align: center;
+      line-height: 1.1;
     }
 
     .hero-subtitle {
       color: var(--text-muted);
-      max-width: 700px;
+      max-width: 600px;
       text-align: center;
+      letter-spacing: 0.01em;
     }
 
     .hero-svg {
@@ -135,10 +164,17 @@
 
     .stat-callout {
       border-left: 4px solid var(--amber);
-      padding: 1.5rem;
+      padding: 1.5rem 2rem;
       max-width: 700px;
-      background: rgba(245, 158, 11, 0.08);
-      border-radius: 8px;
+      background: rgba(245, 158, 11, 0.06);
+      border-radius: 2px 8px 8px 2px;
+      backdrop-filter: blur(8px);
+    }
+
+    .stat-callout strong {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
     /* ── Scroll Visibility ────────────────────────────────── */
@@ -196,11 +232,16 @@
       background: var(--blue);
       color: white;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 0.875rem;
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700; font-size: 0.8rem;
       margin-bottom: 0.75rem;
     }
 
-    .arch-step .step-title { font-weight: 700; margin-bottom: 0.5rem; }
+    .arch-step .step-title {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
     .arch-step .step-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
 
     @media (max-width: 700px) {
@@ -213,16 +254,20 @@
     .results-container { display: flex; flex-direction: column; gap: 3rem; max-width: 900px; width: 100%; }
 
     .result-panel {
-      background: rgba(15, 21, 56, 0.6);
-      border: 1px solid rgba(148, 163, 184, 0.1);
+      background: rgba(15, 21, 56, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.08);
       border-radius: 16px;
-      padding: 2rem;
+      padding: 2.5rem;
+      backdrop-filter: blur(12px);
     }
 
     .result-panel h3 {
+      font-family: "Instrument Serif", Georgia, serif;
       text-align: center;
       margin-bottom: 1.5rem;
-      font-weight: 700;
+      font-weight: 400;
+      font-style: italic;
+      font-size: clamp(1.25rem, 2.5vw, 1.75rem);
     }
 
     .result-panel svg { max-width: 100%; height: auto; }
@@ -242,10 +287,10 @@
     }
     .punchline-card.blue { border: 2px solid var(--blue); background: rgba(59, 130, 246, 0.08); }
     .punchline-card.amber { border: 2px solid var(--amber); background: rgba(245, 158, 11, 0.08); }
-    .punchline-card .tier { font-size: 1.5rem; font-weight: 800; }
-    .punchline-card .price { color: var(--text-muted); margin: 0.25rem 0; }
-    .punchline-card .method { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
-    .punchline-card .rps { font-size: 2rem; font-weight: 800; }
+    .punchline-card .tier { font-family: "Instrument Serif", Georgia, serif; font-size: 1.75rem; font-weight: 400; }
+    .punchline-card .price { font-family: "JetBrains Mono", monospace; color: var(--text-muted); margin: 0.25rem 0; font-size: 0.9rem; }
+    .punchline-card .method { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .punchline-card .rps { font-family: "JetBrains Mono", monospace; font-size: 2rem; font-weight: 700; }
     .punchline-card.blue .rps { color: var(--blue-glow); }
     .punchline-card.amber .rps { color: var(--amber-glow); }
 
@@ -266,8 +311,8 @@
       border-radius: 8px;
       margin-bottom: 0.5rem;
     }
-    .opt-row .label { font-weight: 700; min-width: 130px; }
-    .opt-row .metrics { color: var(--text-muted); flex: 1; }
+    .opt-row .label { font-family: "Instrument Serif", Georgia, serif; font-size: 1.1rem; min-width: 130px; }
+    .opt-row .metrics { font-family: "JetBrains Mono", monospace; color: var(--text-muted); flex: 1; font-size: 0.85rem; }
     .opt-row .opt-bar-container { width: 120px; height: 8px; background: rgba(148, 163, 184, 0.15); border-radius: 4px; overflow: hidden; }
     .opt-row .opt-bar { height: 100%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1); width: 0; }
     .opt-arrow { text-align: center; color: var(--green); font-size: 0.85rem; font-weight: 600; padding: 0.5rem 0; }
@@ -301,11 +346,12 @@
 
     .footer-card:hover {
       border-color: var(--blue);
-      transform: translateY(-2px);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(59, 130, 246, 0.1);
     }
 
     .footer-card svg { width: 32px; height: 32px; stroke: var(--blue-glow); fill: none; stroke-width: 1.5; }
-    .footer-card .card-title { font-weight: 700; }
+    .footer-card .card-title { font-family: "Instrument Serif", Georgia, serif; font-size: 1.15rem; }
     .footer-card .card-subtitle { font-size: 0.85rem; color: var(--text-muted); }
 
     .tech-badges { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
@@ -313,11 +359,13 @@
     .badge {
       padding: 0.4rem 1rem;
       border-radius: 999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(148, 163, 184, 0.15);
       color: var(--text-muted);
-      background: rgba(148, 163, 184, 0.05);
+      background: rgba(148, 163, 184, 0.04);
     }
 
     .footer-attribution {
@@ -364,7 +412,7 @@
             filter="url(#blueGlow)" />
       <text x="360" y="107" text-anchor="middle"
             fill="var(--blue-glow)" font-size="18" font-weight="700"
-            font-family="Inter, sans-serif">DB1</text>
+            font-family="DM Sans, sans-serif">DB1</text>
 
       <!-- DB2 Ledger node -->
       <rect x="555" y="65" width="100" height="70" rx="14"
@@ -372,7 +420,7 @@
             filter="url(#amberGlow)" />
       <text x="605" y="107" text-anchor="middle"
             fill="var(--amber-glow)" font-size="18" font-weight="700"
-            font-family="Inter, sans-serif">DB2</text>
+            font-family="DM Sans, sans-serif">DB2</text>
 
       <!-- Container for chaotic particles (left of shield) -->
       <g id="chaotic-particles"></g>
@@ -406,12 +454,12 @@
             filter="url(#amberGlowProblem)" />
       <text x="300" y="158" text-anchor="middle"
             fill="var(--amber-glow)" font-size="20" font-weight="700"
-            font-family="Inter, sans-serif">DB</text>
+            font-family="DM Sans, sans-serif">DB</text>
 
       <!-- Error rate counter above DB -->
       <text id="problem-error-rate" x="300" y="95" text-anchor="middle"
             fill="var(--red)" font-size="22" font-weight="700"
-            font-family="Inter, sans-serif" opacity="0">0.0%</text>
+            font-family="DM Sans, sans-serif" opacity="0">0.0%</text>
 
       <!-- Container for request dots -->
       <g id="problem-particles"></g>
@@ -451,7 +499,7 @@
         <path d="M80 128 C80 128, 60 145, 60 160 M80 128 C80 128, 100 145, 100 160 M80 128 L80 155"
               fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
         <text x="80" y="190" text-anchor="middle" fill="var(--text-muted)"
-              font-size="14" font-family="Inter, sans-serif">Users</text>
+              font-size="14" font-family="DM Sans, sans-serif">Users</text>
       </g>
 
       <!-- Node 2: DB1 -->
@@ -461,9 +509,9 @@
               filter="url(#archBlueGlow)" />
         <text x="270" y="147" text-anchor="middle"
               fill="var(--blue-glow)" font-size="18" font-weight="700"
-              font-family="Inter, sans-serif">DB1</text>
+              font-family="DM Sans, sans-serif">DB1</text>
         <text x="270" y="200" text-anchor="middle" fill="var(--text-muted)"
-              font-size="13" font-family="Inter, sans-serif">Intake Engine</text>
+              font-size="13" font-family="DM Sans, sans-serif">Intake Engine</text>
       </g>
 
       <!-- Node 3: Queue (cylinder) -->
@@ -476,9 +524,9 @@
                  fill="#1e293b" stroke="var(--blue)" stroke-width="1.5" />
         <text x="465" y="147" text-anchor="middle"
               fill="var(--blue-glow)" font-size="15" font-weight="700"
-              font-family="Inter, sans-serif">pgmq</text>
+              font-family="DM Sans, sans-serif">pgmq</text>
         <text x="465" y="200" text-anchor="middle" fill="var(--text-muted)"
-              font-size="13" font-family="Inter, sans-serif">Message Queue</text>
+              font-size="13" font-family="DM Sans, sans-serif">Message Queue</text>
       </g>
 
       <!-- Node 4: Bridge (hexagon-ish rounded rect with dashed border) -->
@@ -488,9 +536,9 @@
               stroke-dasharray="6 3" />
         <text x="650" y="147" text-anchor="middle"
               fill="var(--text)" font-size="15" font-weight="700"
-              font-family="Inter, sans-serif">Bridge</text>
+              font-family="DM Sans, sans-serif">Bridge</text>
         <text x="650" y="200" text-anchor="middle" fill="var(--text-muted)"
-              font-size="13" font-family="Inter, sans-serif">Edge Function</text>
+              font-size="13" font-family="DM Sans, sans-serif">Edge Function</text>
       </g>
 
       <!-- Node 5: DB2 -->
@@ -500,9 +548,9 @@
               filter="url(#archAmberGlow)" />
         <text x="820" y="147" text-anchor="middle"
               fill="var(--amber-glow)" font-size="18" font-weight="700"
-              font-family="Inter, sans-serif">DB2</text>
+              font-family="DM Sans, sans-serif">DB2</text>
         <text x="820" y="200" text-anchor="middle" fill="var(--text-muted)"
-              font-size="13" font-family="Inter, sans-serif">Ledger</text>
+              font-size="13" font-family="DM Sans, sans-serif">Ledger</text>
       </g>
 
       <!-- Arrow 1: User -> DB1 -->
@@ -566,30 +614,30 @@
         <svg viewBox="0 0 600 280" role="img" aria-label="Shielded vs unshielded bar chart comparison">
           <!-- Legend -->
           <rect x="160" y="10" width="16" height="16" rx="3" fill="var(--blue)" />
-          <text x="182" y="23" fill="var(--text)" font-size="13" font-family="Inter, sans-serif">Shielded</text>
+          <text x="182" y="23" fill="var(--text)" font-size="13" font-family="DM Sans, sans-serif">Shielded</text>
           <rect x="340" y="10" width="16" height="16" rx="3" fill="var(--amber)" />
-          <text x="362" y="23" fill="var(--text)" font-size="13" font-family="Inter, sans-serif">Unshielded</text>
+          <text x="362" y="23" fill="var(--text)" font-size="13" font-family="DM Sans, sans-serif">Unshielded</text>
 
           <!-- Throughput -->
-          <text x="10" y="65" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter, sans-serif">Throughput</text>
+          <text x="10" y="65" fill="var(--text)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif">Throughput</text>
           <rect class="bar" x="130" y="48" width="0" data-width="380" height="22" rx="4" fill="var(--blue)" />
-          <text class="bar-label" x="520" y="64" fill="var(--blue-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">691 rps</text>
+          <text class="bar-label" x="520" y="64" fill="var(--blue-glow)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif" opacity="0">691 rps</text>
           <rect class="bar" x="130" y="76" width="0" data-width="242" height="22" rx="4" fill="var(--amber)" />
-          <text class="bar-label" x="382" y="92" fill="var(--amber-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">440 rps</text>
+          <text class="bar-label" x="382" y="92" fill="var(--amber-glow)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif" opacity="0">440 rps</text>
 
           <!-- p95 Latency -->
-          <text x="10" y="145" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter, sans-serif">p95 Latency</text>
+          <text x="10" y="145" fill="var(--text)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif">p95 Latency</text>
           <rect class="bar" x="130" y="128" width="0" data-width="110" height="22" rx="4" fill="var(--blue)" />
-          <text class="bar-label" x="250" y="144" fill="var(--blue-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">991ms</text>
+          <text class="bar-label" x="250" y="144" fill="var(--blue-glow)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif" opacity="0">991ms</text>
           <rect class="bar" x="130" y="156" width="0" data-width="380" height="22" rx="4" fill="var(--amber)" />
-          <text class="bar-label" x="520" y="172" fill="var(--amber-glow)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">3,408ms</text>
+          <text class="bar-label" x="520" y="172" fill="var(--amber-glow)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif" opacity="0">3,408ms</text>
 
           <!-- Error Rate -->
-          <text x="10" y="225" fill="var(--text)" font-size="13" font-weight="700" font-family="Inter, sans-serif">Error Rate</text>
+          <text x="10" y="225" fill="var(--text)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif">Error Rate</text>
           <rect class="bar" x="130" y="208" width="0" data-width="8" height="22" rx="4" fill="var(--green)" />
-          <text class="bar-label" x="148" y="224" fill="var(--green)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">0%</text>
+          <text class="bar-label" x="148" y="224" fill="var(--green)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif" opacity="0">0%</text>
           <rect class="bar" x="130" y="236" width="0" data-width="380" height="22" rx="4" fill="var(--red)" />
-          <text class="bar-label" x="520" y="252" fill="var(--red)" font-size="13" font-weight="700" font-family="Inter, sans-serif" opacity="0">10.7%</text>
+          <text class="bar-label" x="520" y="252" fill="var(--red)" font-size="13" font-weight="700" font-family="DM Sans, sans-serif" opacity="0">10.7%</text>
         </svg>
       </div>
 
@@ -660,7 +708,7 @@
     <h2 style="font-weight:800; color:var(--text); text-align:center;">Explore</h2>
 
     <div class="footer-links">
-      <a class="footer-card" href="https://github.com/dventimiha/pg-ticketing-system" target="_blank" rel="noopener">
+      <a class="footer-card" href="https://github.com/dventimisupabase/pg-ticketing-system" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
         <span class="card-title">Source Code</span>
         <span class="card-subtitle">Browse on GitHub</span>
@@ -670,7 +718,7 @@
         <span class="card-title">Live Demo</span>
         <span class="card-subtitle">Try SupaTickets</span>
       </a>
-      <a class="footer-card" href="https://github.com/dventimiha/pg-ticketing-system/blob/main/load-test-results.md" target="_blank" rel="noopener">
+      <a class="footer-card" href="https://github.com/dventimisupabase/pg-ticketing-system/blob/main/load-test-results.md" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
         <span class="card-title">Benchmarks</span>
         <span class="card-subtitle">Load test data</span>
