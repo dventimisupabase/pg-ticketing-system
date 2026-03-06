@@ -158,6 +158,54 @@
       opacity: 1;
       transform: none;
     }
+
+    /* ── Architecture Section ────────────────────────────── */
+    #architecture { gap: 2rem; }
+
+    .arch-svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .arch-node { transition: opacity 0.6s ease; }
+
+    .arch-path {
+      transition: stroke-dashoffset 0.6s ease;
+    }
+
+    .arch-steps { display: flex; gap: 1.5rem; max-width: 900px; width: 100%; }
+
+    .arch-step {
+      flex: 1;
+      padding: 1.25rem;
+      border-radius: 12px;
+      border-left: 3px solid transparent;
+      transition: all 0.6s ease;
+      opacity: 0.3;
+    }
+
+    .arch-step.active {
+      opacity: 1;
+      border-left-color: var(--blue);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .arch-step .step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .arch-step .step-title { font-weight: 700; margin-bottom: 0.5rem; }
+    .arch-step .step-desc { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; }
+
+    @media (max-width: 700px) {
+      .arch-steps { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
@@ -252,7 +300,133 @@
     </div>
   </section>
 
-  <section id="architecture" class="section"></section>
+  <section id="architecture" class="section">
+    <h2 style="font-weight:800; color:var(--text); text-align:center;">How it works</h2>
+
+    <svg class="arch-svg" width="900" height="350" viewBox="0 0 900 350">
+      <defs>
+        <filter id="archBlueGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <filter id="archAmberGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <marker id="archArrowhead" viewBox="0 0 10 7" refX="10" refY="3.5"
+                markerWidth="10" markerHeight="7" orient="auto-start-reverse">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+        </marker>
+      </defs>
+
+      <!-- Node 1: User icon -->
+      <g class="arch-node" data-step="1" opacity="0.1">
+        <circle cx="80" cy="110" r="18" fill="none" stroke="var(--text-muted)" stroke-width="2" />
+        <path d="M80 128 C80 128, 60 145, 60 160 M80 128 C80 128, 100 145, 100 160 M80 128 L80 155"
+              fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" />
+        <text x="80" y="190" text-anchor="middle" fill="var(--text-muted)"
+              font-size="14" font-family="Inter, sans-serif">Users</text>
+      </g>
+
+      <!-- Node 2: DB1 -->
+      <g class="arch-node" data-step="1" opacity="0.1">
+        <rect x="210" y="105" width="120" height="70" rx="14"
+              fill="#1e293b" stroke="var(--blue)" stroke-width="2"
+              filter="url(#archBlueGlow)" />
+        <text x="270" y="147" text-anchor="middle"
+              fill="var(--blue-glow)" font-size="18" font-weight="700"
+              font-family="Inter, sans-serif">DB1</text>
+        <text x="270" y="200" text-anchor="middle" fill="var(--text-muted)"
+              font-size="13" font-family="Inter, sans-serif">Intake Engine</text>
+      </g>
+
+      <!-- Node 3: Queue (cylinder) -->
+      <g class="arch-node" data-step="2" opacity="0.1">
+        <rect x="410" y="115" width="110" height="50" rx="6"
+              fill="#1e293b" stroke="var(--blue)" stroke-width="1.5" />
+        <ellipse cx="465" cy="115" rx="55" ry="12"
+                 fill="#1e293b" stroke="var(--blue)" stroke-width="1.5" />
+        <ellipse cx="465" cy="165" rx="55" ry="12"
+                 fill="#1e293b" stroke="var(--blue)" stroke-width="1.5" />
+        <text x="465" y="147" text-anchor="middle"
+              fill="var(--blue-glow)" font-size="15" font-weight="700"
+              font-family="Inter, sans-serif">pgmq</text>
+        <text x="465" y="200" text-anchor="middle" fill="var(--text-muted)"
+              font-size="13" font-family="Inter, sans-serif">Message Queue</text>
+      </g>
+
+      <!-- Node 4: Bridge (hexagon-ish rounded rect with dashed border) -->
+      <g class="arch-node" data-step="3" opacity="0.1">
+        <rect x="595" y="110" width="110" height="60" rx="12"
+              fill="#1e293b" stroke="var(--text-muted)" stroke-width="1.5"
+              stroke-dasharray="6 3" />
+        <text x="650" y="147" text-anchor="middle"
+              fill="var(--text)" font-size="15" font-weight="700"
+              font-family="Inter, sans-serif">Bridge</text>
+        <text x="650" y="200" text-anchor="middle" fill="var(--text-muted)"
+              font-size="13" font-family="Inter, sans-serif">Edge Function</text>
+      </g>
+
+      <!-- Node 5: DB2 -->
+      <g class="arch-node" data-step="4" opacity="0.1">
+        <rect x="760" y="105" width="120" height="70" rx="14"
+              fill="#1e293b" stroke="var(--amber)" stroke-width="2"
+              filter="url(#archAmberGlow)" />
+        <text x="820" y="147" text-anchor="middle"
+              fill="var(--amber-glow)" font-size="18" font-weight="700"
+              font-family="Inter, sans-serif">DB2</text>
+        <text x="820" y="200" text-anchor="middle" fill="var(--text-muted)"
+              font-size="13" font-family="Inter, sans-serif">Ledger</text>
+      </g>
+
+      <!-- Arrow 1: User -> DB1 -->
+      <path class="arch-path" data-step="1"
+            d="M105 140 L200 140"
+            fill="none" stroke="#94a3b8" stroke-width="2"
+            marker-end="url(#archArrowhead)" opacity="0" />
+
+      <!-- Arrow 2: DB1 -> Queue -->
+      <path class="arch-path" data-step="2"
+            d="M340 140 L405 140"
+            fill="none" stroke="#94a3b8" stroke-width="2"
+            marker-end="url(#archArrowhead)" opacity="0" />
+
+      <!-- Arrow 3: Queue -> Bridge -->
+      <path class="arch-path" data-step="3"
+            d="M525 140 L590 140"
+            fill="none" stroke="#94a3b8" stroke-width="2"
+            marker-end="url(#archArrowhead)" opacity="0" />
+
+      <!-- Arrow 4: Bridge -> DB2 -->
+      <path class="arch-path" data-step="4"
+            d="M710 140 L755 140"
+            fill="none" stroke="#94a3b8" stroke-width="2"
+            marker-end="url(#archArrowhead)" opacity="0" />
+    </svg>
+
+    <div class="arch-steps">
+      <div class="arch-step" data-step="1">
+        <div class="step-num">1</div>
+        <div class="step-title">Claim</div>
+        <div class="step-desc">O(1) sequence-based UPDATE on an UNLOGGED table. ~10ms median response.</div>
+      </div>
+      <div class="arch-step" data-step="2">
+        <div class="step-num">2</div>
+        <div class="step-title">Sweep</div>
+        <div class="step-desc">pg_cron batches reserved slots into a pgmq message queue every minute.</div>
+      </div>
+      <div class="arch-step" data-step="3">
+        <div class="step-num">3</div>
+        <div class="step-title">Bridge</div>
+        <div class="step-desc">Deno Edge Function drains the queue and commits to DB2. Idempotent, retry-safe, with dead-letter queue.</div>
+      </div>
+      <div class="arch-step" data-step="4">
+        <div class="step-num">4</div>
+        <div class="step-title">Ledger</div>
+        <div class="step-desc">Confirmed tickets land in the permanent ledger at a metered rate. DB2 never sees the burst.</div>
+      </div>
+    </div>
+  </section>
 
   <section id="results" class="section"></section>
 
@@ -609,15 +783,107 @@
       }
     }
 
+    // ── ArchitectureAnimation ──────────────────────────────
+    class ArchitectureAnimation {
+      constructor() {
+        this.nodes = document.querySelectorAll('.arch-node');
+        this.paths = document.querySelectorAll('.arch-path');
+        this.steps = document.querySelectorAll('.arch-step');
+        this.timeouts = [];
+
+        // Initialize stroke-dasharray/dashoffset on each path
+        this.paths.forEach(path => {
+          const len = path.getTotalLength();
+          path.style.strokeDasharray = len;
+          path.style.strokeDashoffset = len;
+        });
+      }
+
+      enter() {
+        this.reset();
+
+        const stepDelay = 800;
+
+        for (let step = 1; step <= 4; step++) {
+          const t = setTimeout(() => {
+            // Activate nodes for this step
+            this.nodes.forEach(node => {
+              if (parseInt(node.dataset.step) === step) {
+                node.setAttribute('opacity', '1');
+              }
+            });
+
+            // Draw arrows for this step
+            this.paths.forEach(path => {
+              if (parseInt(path.dataset.step) === step) {
+                path.setAttribute('opacity', '1');
+                path.style.strokeDashoffset = '0';
+              }
+            });
+
+            // Activate step description, deactivate previous
+            this.steps.forEach(s => {
+              if (parseInt(s.dataset.step) === step) {
+                s.classList.add('active');
+              } else {
+                s.classList.remove('active');
+              }
+            });
+          }, (step - 1) * stepDelay);
+
+          this.timeouts.push(t);
+        }
+
+        // After all steps complete, set final resting state
+        const finalTimeout = setTimeout(() => {
+          this.nodes.forEach(node => {
+            node.setAttribute('opacity', '0.7');
+          });
+          // Step 4 remains active, all arrows stay drawn
+        }, 4 * stepDelay);
+        this.timeouts.push(finalTimeout);
+      }
+
+      leave() {
+        this.reset();
+      }
+
+      reset() {
+        // Clear pending timeouts
+        this.timeouts.forEach(t => clearTimeout(t));
+        this.timeouts = [];
+
+        // Reset nodes to hidden
+        this.nodes.forEach(node => {
+          node.setAttribute('opacity', '0.1');
+        });
+
+        // Reset arrows
+        this.paths.forEach(path => {
+          path.setAttribute('opacity', '0');
+          const len = path.getTotalLength();
+          path.style.strokeDashoffset = len;
+        });
+
+        // Remove active classes from step descriptions
+        this.steps.forEach(s => s.classList.remove('active'));
+      }
+    }
+
     // Start hero immediately on page load
     new HeroAnimation();
 
     // Wire up scroll-triggered animations
     const problemAnim = new ProblemAnimation();
+    const archAnim = new ArchitectureAnimation();
     new ScrollAnimator({
       problem: {
         enter: () => problemAnim.enter(),
         leave: () => problemAnim.leave()
+      },
+      architecture: {
+        enter: () => archAnim.enter(),
+        leave: () => archAnim.leave()
       }
     });
   </script>
