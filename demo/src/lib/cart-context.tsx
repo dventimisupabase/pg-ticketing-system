@@ -9,6 +9,8 @@ interface CartContextType {
   items: CartItem[]
   loading: boolean
   soonestExpiry: Date | null
+  shielded: boolean
+  setShielded: (v: boolean) => void
   refresh: () => Promise<void>
   addToCart: (eventId: string, count: number) => Promise<{ success: boolean; error?: string }>
   removeFromCart: (eventId: string) => Promise<void>
@@ -20,6 +22,7 @@ const CartContext = createContext<CartContextType | null>(null)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [shielded, setShielded] = useState(true)
   const supabase = createClient()
   const db1 = createDb1Client()
 
@@ -58,7 +61,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (expired.length > 0) {
         const { data: { user } } = await supabase.auth.getUser()
         for (const item of expired) {
-          if (user) {
+          if (shielded && user) {
             try {
               await db1.rpc('unclaim_slot', { p_pool_id: item.event_id, p_user_id: user.id })
             } catch {
@@ -72,7 +75,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [items, supabase, db1, refresh])
+  }, [items, supabase, db1, shielded, refresh])
 
   const soonestExpiry = items.length > 0
     ? new Date(Math.min(...items.map(i => new Date(i.expires_at).getTime())))
@@ -83,28 +86,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Not authenticated' }
 
-    // Step 1: Claim slots on DB1 (concurrency gatekeeper)
-    const claimedSlots: string[] = []
-    for (let i = 0; i < count; i++) {
-      const { data, error } = await db1.rpc('claim_resource_and_queue', {
-        p_pool_id: eventId,
-        p_user_id: user.id,
-      })
-      if (error) {
-        // Rollback: unclaim any already-claimed slots on DB1
-        if (claimedSlots.length > 0) {
-          await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+    if (shielded) {
+      // Step 1: Claim slots on DB1 (concurrency gatekeeper)
+      const claimedSlots: string[] = []
+      for (let i = 0; i < count; i++) {
+        const { data, error } = await db1.rpc('claim_resource_and_queue', {
+          p_pool_id: eventId,
+          p_user_id: user.id,
+        })
+        if (error) {
+          if (claimedSlots.length > 0) {
+            await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+          }
+          return { success: false, error: error.message }
         }
-        return { success: false, error: error.message }
-      }
-      if (!data) {
-        // Sold out — unclaim any partial claims on DB1
-        if (claimedSlots.length > 0) {
-          await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+        if (!data) {
+          if (claimedSlots.length > 0) {
+            await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+          }
+          return { success: false, error: 'Not enough tickets available' }
         }
-        return { success: false, error: 'Not enough tickets available' }
+        claimedSlots.push(data)
       }
-      claimedSlots.push(data)
     }
 
     // Step 2: Record reservation on DB2 (bookkeeping)
@@ -114,8 +117,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
 
     if (error || !data) {
-      // DB2 claim failed — rollback DB1
-      await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+      if (shielded) {
+        await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+      }
       return { success: false, error: error?.message ?? 'Failed to reserve tickets' }
     }
 
@@ -124,12 +128,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const removeFromCart = async (eventId: string) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      try {
-        await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
-      } catch {
-        // DB1 unreachable — orphaned slots reaped by cron
+    if (shielded) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        try {
+          await db1.rpc('unclaim_slot', { p_pool_id: eventId, p_user_id: user.id })
+        } catch {
+          // DB1 unreachable — orphaned slots reaped by cron
+        }
       }
     }
     await supabase.rpc('unclaim_tickets', { p_event_id: eventId })
@@ -146,7 +152,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <CartContext.Provider value={{ items, loading, soonestExpiry, refresh, addToCart, removeFromCart, checkout }}>
+    <CartContext.Provider value={{ items, loading, soonestExpiry, shielded, setShielded, refresh, addToCart, removeFromCart, checkout }}>
       {children}
     </CartContext.Provider>
   )

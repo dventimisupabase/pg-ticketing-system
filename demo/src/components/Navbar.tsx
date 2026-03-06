@@ -35,7 +35,7 @@ function CountdownBadge({ expiresAt }: { expiresAt: Date }) {
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null)
   const supabase = createClient()
-  const { items, soonestExpiry } = useCart()
+  const { items, soonestExpiry, shielded, setShielded } = useCart()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -60,6 +60,19 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShielded(!shielded)}
+            className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1"
+            title={shielded ? 'Using shielded path (DB1 → DB2)' : 'Using unshielded path (DB2 only)'}
+          >
+            <div className={`relative h-4 w-7 rounded-full transition-colors ${shielded ? 'bg-cyan-500' : 'bg-amber-500'}`}>
+              <div className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${shielded ? 'left-3.5' : 'left-0.5'}`} />
+            </div>
+            <span className={`text-xs font-medium ${shielded ? 'text-cyan-400' : 'text-amber-400'}`}>
+              {shielded ? 'Shielded' : 'Unshielded'}
+            </span>
+          </button>
+
           {user ? (
             <>
               <Link href="/cart" className="relative flex items-center gap-1 text-sm text-zinc-400 hover:text-white">
