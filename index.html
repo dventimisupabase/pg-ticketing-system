@@ -2107,6 +2107,86 @@ body::before {
       </tbody>
     </table>
 
+    <!-- Shielded vs Unshielded comparison -->
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;margin-top:48px;margin-bottom:8px;color:var(--text-dim);">Shielded vs Unshielded &mdash; 500 Concurrent Users</h3>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">Head-to-head cloud comparison: DB1 intake engine vs hitting the permanent ledger directly. Both on identical Micro instances.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:24px 0;">
+      <!-- Shielded card -->
+      <div style="padding:28px;border-radius:14px;border:1px solid var(--cyan-dim);background:linear-gradient(135deg,#0a1520 0%,var(--bg-card) 100%);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--cyan);"></div>
+        <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Shielded (DB1)
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--cyan);">691</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">requests/sec</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--emerald);">0%</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">error rate</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.2rem,2vw,1.5rem);font-weight:600;color:var(--cyan);">991ms</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">p95 latency</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.2rem,2vw,1.5rem);font-weight:600;color:var(--text-dim);">56,626</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">total claims</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unshielded card -->
+      <div style="padding:28px;border-radius:14px;border:1px solid var(--coral-dim);background:linear-gradient(135deg,#1a0a0a 0%,var(--bg-card) 100%);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--coral);"></div>
+        <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--coral);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Unshielded (Direct DB2)
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--text-dim);">440</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">requests/sec</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.5rem,3vw,2rem);font-weight:700;color:var(--coral);">10.7%</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">error rate</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.2rem,2vw,1.5rem);font-weight:600;color:var(--coral);">3,408ms</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">p95 latency</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-mono);font-size:clamp(1.2rem,2vw,1.5rem);font-weight:600;color:var(--text-dim);">36,084</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">total claims</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delta callouts -->
+    <div style="display:flex;gap:16px;justify-content:center;margin:24px 0;flex-wrap:wrap;">
+      <div style="padding:12px 20px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:1.2rem;font-weight:700;color:var(--cyan);">3.4&times;</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">faster p95</div>
+      </div>
+      <div style="padding:12px 20px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:1.2rem;font-weight:700;color:var(--emerald);">+57%</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">throughput</div>
+      </div>
+      <div style="padding:12px 20px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:1.2rem;font-weight:700;color:var(--coral);">1 in 10</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">users fail without shield</div>
+      </div>
+      <div style="padding:12px 20px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:1.2rem;font-weight:700;color:var(--text-dim);">$25/mo</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);">both instances identical</div>
+      </div>
+    </div>
+
     <div class="perf-insight">
       <div class="perf-insight-card">
         <h4 style="color:var(--cyan);">Algorithm &gt; Hardware</h4>
@@ -2114,7 +2194,7 @@ body::before {
       </div>
       <div class="perf-insight-card">
         <h4 style="color:var(--emerald);">The Legacy DB Never Sees the Surge</h4>
-        <p>DB1 absorbs the stampede at 1,000 rps. The bridge worker then drains the queue at whatever rate DB2 (your core ledger) can handle &mdash; calling payment webhooks along the way. Your production database sees a calm, metered stream, not a thundering herd.</p>
+        <p>At 500 concurrent users, DB2 drops <strong style="color:var(--coral);">10.7% of requests</strong> and responds with 3.4&times; higher latency. DB1 handles the same burst with <strong style="color:var(--emerald);">zero errors</strong> and sub-second p95. The bridge worker then drains the queue at whatever rate DB2 can handle &mdash; your production database sees a calm, metered stream, not a thundering herd.</p>
       </div>
     </div>
 
