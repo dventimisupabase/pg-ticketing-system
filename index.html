@@ -6,7 +6,7 @@
   <title>Burst-to-Queue Ledger</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
     /* ── Custom Properties ─────────────────────────────────── */
     :root {
@@ -42,7 +42,7 @@
     }
 
     /* ── Responsive Font Sizing ────────────────────────────── */
-    h1, h2 { font-family: "Instrument Serif", Georgia, serif; }
+    h1, h2 { font-family: "Syne", sans-serif; }
     h1 { font-size: clamp(2.5rem, 6vw, 5rem); letter-spacing: -0.02em; }
     h2 { font-size: clamp(1.75rem, 4vw, 3.25rem); letter-spacing: -0.01em; }
     h3 { font-size: clamp(1.25rem, 2.5vw, 2rem); font-family: "DM Sans", sans-serif; }
@@ -94,8 +94,7 @@
     }
 
     .hero-headline {
-      font-weight: 400;
-      font-style: italic;
+      font-weight: 800;
       background: linear-gradient(135deg, var(--blue-glow) 0%, #e2e8f0 40%, var(--amber-glow) 100%);
       -webkit-background-clip: text;
       background-clip: text;
@@ -238,7 +237,7 @@
     }
 
     .arch-step .step-title {
-      font-family: "Instrument Serif", Georgia, serif;
+      font-family: "Syne", sans-serif;
       font-size: 1.25rem;
       margin-bottom: 0.5rem;
     }
@@ -262,11 +261,10 @@
     }
 
     .result-panel h3 {
-      font-family: "Instrument Serif", Georgia, serif;
+      font-family: "Syne", sans-serif;
       text-align: center;
       margin-bottom: 1.5rem;
-      font-weight: 400;
-      font-style: italic;
+      font-weight: 700;
       font-size: clamp(1.25rem, 2.5vw, 1.75rem);
     }
 
@@ -287,7 +285,7 @@
     }
     .punchline-card.blue { border: 2px solid var(--blue); background: rgba(59, 130, 246, 0.08); }
     .punchline-card.amber { border: 2px solid var(--amber); background: rgba(245, 158, 11, 0.08); }
-    .punchline-card .tier { font-family: "Instrument Serif", Georgia, serif; font-size: 1.75rem; font-weight: 400; }
+    .punchline-card .tier { font-family: "Syne", sans-serif; font-size: 1.75rem; font-weight: 400; }
     .punchline-card .price { font-family: "JetBrains Mono", monospace; color: var(--text-muted); margin: 0.25rem 0; font-size: 0.9rem; }
     .punchline-card .method { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
     .punchline-card .rps { font-family: "JetBrains Mono", monospace; font-size: 2rem; font-weight: 700; }
@@ -311,7 +309,7 @@
       border-radius: 8px;
       margin-bottom: 0.5rem;
     }
-    .opt-row .label { font-family: "Instrument Serif", Georgia, serif; font-size: 1.1rem; min-width: 130px; }
+    .opt-row .label { font-family: "Syne", sans-serif; font-size: 1.1rem; min-width: 130px; }
     .opt-row .metrics { font-family: "JetBrains Mono", monospace; color: var(--text-muted); flex: 1; font-size: 0.85rem; }
     .opt-row .opt-bar-container { width: 120px; height: 8px; background: rgba(148, 163, 184, 0.15); border-radius: 4px; overflow: hidden; }
     .opt-row .opt-bar { height: 100%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1); width: 0; }
@@ -351,7 +349,7 @@
     }
 
     .footer-card svg { width: 32px; height: 32px; stroke: var(--blue-glow); fill: none; stroke-width: 1.5; }
-    .footer-card .card-title { font-family: "Instrument Serif", Georgia, serif; font-size: 1.15rem; }
+    .footer-card .card-title { font-family: "Syne", sans-serif; font-size: 1.15rem; }
     .footer-card .card-subtitle { font-size: 0.85rem; color: var(--text-muted); }
 
     .tech-badges { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
@@ -713,7 +711,7 @@
         <span class="card-title">Source Code</span>
         <span class="card-subtitle">Browse on GitHub</span>
       </a>
-      <a class="footer-card" href="#" target="_blank" rel="noopener">
+      <a class="footer-card" href="https://demo-liart-three-47.vercel.app/" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
         <span class="card-title">Live Demo</span>
         <span class="card-subtitle">Try SupaTickets</span>
