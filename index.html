@@ -110,6 +110,54 @@
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(8px); }
     }
+
+    /* ── Problem Section ──────────────────────────────────── */
+    #problem {
+      gap: 2rem;
+    }
+
+    .problem-headline {
+      font-weight: 800;
+      color: var(--text);
+      text-align: center;
+    }
+
+    .problem-copy {
+      color: var(--text-muted);
+      max-width: 700px;
+      text-align: center;
+    }
+
+    .problem-svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .stat-callout {
+      border-left: 4px solid var(--amber);
+      padding: 1.5rem;
+      max-width: 700px;
+      background: rgba(245, 158, 11, 0.08);
+      border-radius: 8px;
+    }
+
+    /* ── Scroll Visibility ────────────────────────────────── */
+    .section {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Hero is always visible (no scroll-in needed) */
+    #hero {
+      opacity: 1;
+      transform: none;
+    }
   </style>
 </head>
 <body>
@@ -166,7 +214,43 @@
     </div>
   </section>
 
-  <section id="problem" class="section"></section>
+  <section id="problem" class="section">
+    <h2 class="problem-headline">Production databases weren't built for flash mobs.</h2>
+    <p class="problem-copy">When 10,000 fans hit "Buy" at the same moment, your transactional database faces a wall of concurrent writes. Rows lock. Connections saturate. Users get errors — or worse, inconsistent state.</p>
+
+    <svg class="problem-svg" width="600" height="300" viewBox="0 0 600 300">
+      <defs>
+        <filter id="amberGlowProblem" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+
+      <!-- Single DB icon -->
+      <rect id="problem-db-rect" x="230" y="110" width="140" height="80" rx="14"
+            fill="#1e293b" stroke="var(--amber)" stroke-width="2"
+            filter="url(#amberGlowProblem)" />
+      <text x="300" y="158" text-anchor="middle"
+            fill="var(--amber-glow)" font-size="20" font-weight="700"
+            font-family="Inter, sans-serif">DB</text>
+
+      <!-- Error rate counter above DB -->
+      <text id="problem-error-rate" x="300" y="95" text-anchor="middle"
+            fill="var(--red)" font-size="22" font-weight="700"
+            font-family="Inter, sans-serif" opacity="0">0.0%</text>
+
+      <!-- Container for request dots -->
+      <g id="problem-particles"></g>
+    </svg>
+
+    <div class="stat-callout">
+      <p style="font-size: clamp(1rem, 1.5vw, 1.2rem); color: var(--text);">
+        At <strong style="color: var(--amber);">500 concurrent users</strong>, a direct database takes
+        <strong style="color: var(--amber);">3.4s p95</strong> and drops
+        <strong style="color: var(--red);">1 in 10 requests</strong>.
+      </p>
+    </div>
+  </section>
 
   <section id="architecture" class="section"></section>
 
@@ -309,8 +393,233 @@
       }
     }
 
-    // Start immediately on page load
+    // ── ScrollAnimator (generic, reusable) ──────────────────
+    class ScrollAnimator {
+      constructor(sectionMap) {
+        this.sectionMap = sectionMap; // { sectionId: { enter(), leave() } }
+        this.activeSet = new Set();
+
+        this.observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              const id = entry.target.id;
+              const callbacks = this.sectionMap[id];
+              if (!callbacks) return;
+
+              if (entry.intersectionRatio >= 0.2) {
+                entry.target.classList.add("visible");
+                if (!this.activeSet.has(id)) {
+                  this.activeSet.add(id);
+                  callbacks.enter();
+                }
+              } else if (entry.intersectionRatio < 0.05 && this.activeSet.has(id)) {
+                this.activeSet.delete(id);
+                callbacks.leave();
+              }
+            });
+          },
+          { threshold: [0, 0.2, 0.5] }
+        );
+
+        Object.keys(sectionMap).forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) this.observer.observe(el);
+        });
+      }
+    }
+
+    // ── ProblemAnimation ──────────────────────────────────────
+    class ProblemAnimation {
+      constructor() {
+        this.svgNS = "http://www.w3.org/2000/svg";
+        this.particleGroup = document.getElementById("problem-particles");
+        this.errorRateEl = document.getElementById("problem-error-rate");
+        this.particles = [];
+        this.running = false;
+        this.rafId = null;
+
+        // DB rect center & bounds
+        this.dbLeft = 230;
+        this.dbRight = 370;
+        this.dbCenterX = 300;
+        this.dbCenterY = 150;
+
+        // Error counter state
+        this.errorTarget = 10.7;
+        this.errorCurrent = 0;
+        this.errorStartTime = 0;
+        this.errorDuration = 2000; // ms
+
+        // Spawn timing
+        this.spawnTimer = 0;
+        this.spawnInterval = 60;
+        this.lastTime = 0;
+
+        this.animate = this.animate.bind(this);
+      }
+
+      enter() {
+        if (this.running) return;
+        this.running = true;
+        this.errorCurrent = 0;
+        this.errorStartTime = performance.now();
+        this.errorRateEl.setAttribute("opacity", "1");
+        this.errorRateEl.textContent = "0.0%";
+        this.lastTime = performance.now();
+        this.spawnTimer = 0;
+        this.rafId = requestAnimationFrame(this.animate);
+      }
+
+      leave() {
+        this.running = false;
+        if (this.rafId) {
+          cancelAnimationFrame(this.rafId);
+          this.rafId = null;
+        }
+        // Clean up all particles
+        while (this.particles.length) {
+          const p = this.particles.pop();
+          p.el.remove();
+        }
+        // Reset counter
+        this.errorCurrent = 0;
+        this.errorRateEl.textContent = "0.0%";
+        this.errorRateEl.setAttribute("opacity", "0");
+      }
+
+      spawnParticle() {
+        const el = document.createElementNS(this.svgNS, "circle");
+        const r = 2.5 + Math.random() * 2;
+        const y = 60 + Math.random() * 180;
+        el.setAttribute("cx", -5);
+        el.setAttribute("cy", y);
+        el.setAttribute("r", r);
+        el.setAttribute("fill", "#60a5fa");
+        el.setAttribute("opacity", "0.9");
+        this.particleGroup.appendChild(el);
+
+        // Decide fate: ~30% deflect (turn red), ~30% pile up, ~40% absorbed
+        const fate = Math.random();
+        let type;
+        if (fate < 0.30) type = "deflect";
+        else if (fate < 0.60) type = "pileup";
+        else type = "absorb";
+
+        this.particles.push({
+          el,
+          x: -5,
+          y,
+          speed: 200 + Math.random() * 250,
+          yJitter: (Math.random() - 0.5) * 40,
+          opacity: 0.9,
+          r,
+          type,
+          phase: "approach", // approach → react → fade
+          reactTimer: 0
+        });
+      }
+
+      animate(now) {
+        if (!this.running) return;
+        const dt = Math.min((now - this.lastTime) / 1000, 0.05);
+        this.lastTime = now;
+
+        // ── Update error counter ──
+        const elapsed = now - this.errorStartTime;
+        if (elapsed < this.errorDuration) {
+          this.errorCurrent = this.errorTarget * (elapsed / this.errorDuration);
+        } else {
+          this.errorCurrent = this.errorTarget;
+        }
+        this.errorRateEl.textContent = this.errorCurrent.toFixed(1) + "%";
+
+        // ── Spawn particles ──
+        this.spawnTimer += dt * 1000;
+        if (this.spawnTimer >= this.spawnInterval) {
+          this.spawnTimer -= this.spawnInterval;
+          this.spawnParticle();
+        }
+
+        // ── Update particles ──
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+
+          if (p.phase === "approach") {
+            p.x += p.speed * dt;
+            p.y += p.yJitter * dt;
+            if (p.y < 30) p.y = 30;
+            if (p.y > 270) p.y = 270;
+
+            // When reaching the DB zone
+            if (p.x >= this.dbLeft - 15) {
+              if (p.type === "deflect") {
+                // Turn red, reverse
+                p.el.setAttribute("fill", "var(--red)");
+                p.phase = "react";
+                p.speed = -(120 + Math.random() * 80);
+                p.yJitter = (Math.random() - 0.5) * 200;
+                p.reactTimer = 0;
+              } else if (p.type === "pileup") {
+                // Slow down dramatically, pile up
+                p.phase = "react";
+                p.speed = 2 + Math.random() * 5;
+                p.yJitter = (Math.random() - 0.5) * 10;
+                p.reactTimer = 0;
+                p.el.setAttribute("opacity", "0.7");
+              } else {
+                // Absorb: fade out at the DB
+                p.phase = "react";
+                p.speed = 10;
+                p.reactTimer = 0;
+              }
+            }
+          } else if (p.phase === "react") {
+            p.reactTimer += dt;
+            p.x += p.speed * dt;
+            p.y += p.yJitter * dt;
+            if (p.y < 30) p.y = 30;
+            if (p.y > 270) p.y = 270;
+
+            if (p.type === "deflect") {
+              // Fade out as it flies back
+              p.opacity = Math.max(0, 0.9 - p.reactTimer * 1.2);
+            } else if (p.type === "pileup") {
+              // Slowly fade after sitting
+              if (p.reactTimer > 1.5) {
+                p.opacity = Math.max(0, 0.7 - (p.reactTimer - 1.5) * 0.8);
+              }
+            } else {
+              // Absorb: quick fade
+              p.opacity = Math.max(0, 0.9 - p.reactTimer * 2.5);
+            }
+          }
+
+          p.el.setAttribute("cx", p.x);
+          p.el.setAttribute("cy", p.y);
+          p.el.setAttribute("opacity", p.opacity);
+
+          // Remove dead particles
+          if (p.opacity <= 0 || p.x < -20 || p.x > 620) {
+            p.el.remove();
+            this.particles.splice(i, 1);
+          }
+        }
+
+        this.rafId = requestAnimationFrame(this.animate);
+      }
+    }
+
+    // Start hero immediately on page load
     new HeroAnimation();
+
+    // Wire up scroll-triggered animations
+    const problemAnim = new ProblemAnimation();
+    new ScrollAnimator({
+      problem: {
+        enter: () => problemAnim.enter(),
+        leave: () => problemAnim.leave()
+      }
+    });
   </script>
 </body>
 </html>
