@@ -278,6 +278,60 @@
       .punchline-cards { flex-direction: column; align-items: center; }
       .punchline-card { max-width: 100%; }
     }
+
+    /* ── Footer Section ─────────────────────────────────────── */
+    #footer { gap: 2rem; min-height: auto; padding-bottom: 4rem; }
+
+    .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; }
+
+    .footer-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1.5rem 2rem;
+      border-radius: 12px;
+      background: rgba(15, 21, 56, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.3s ease;
+      min-width: 180px;
+    }
+
+    .footer-card:hover {
+      border-color: var(--blue);
+      transform: translateY(-2px);
+    }
+
+    .footer-card svg { width: 32px; height: 32px; stroke: var(--blue-glow); fill: none; stroke-width: 1.5; }
+    .footer-card .card-title { font-weight: 700; }
+    .footer-card .card-subtitle { font-size: 0.85rem; color: var(--text-muted); }
+
+    .tech-badges { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; margin-top: 1rem; }
+
+    .badge {
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-muted);
+      background: rgba(148, 163, 184, 0.05);
+    }
+
+    .footer-attribution {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    /* ── Staggered Entrance Delays ──────────────────────────── */
+    .section > *:nth-child(1) { transition-delay: 0s; }
+    .section > *:nth-child(2) { transition-delay: 0.1s; }
+    .section > *:nth-child(3) { transition-delay: 0.2s; }
+    .section > *:nth-child(4) { transition-delay: 0.3s; }
   </style>
 </head>
 <body>
@@ -602,7 +656,39 @@
     </div>
   </section>
 
-  <section id="footer" class="section"></section>
+  <section id="footer" class="section">
+    <h2 style="font-weight:800; color:var(--text); text-align:center;">Explore</h2>
+
+    <div class="footer-links">
+      <a class="footer-card" href="https://github.com/dventimiha/pg-ticketing-system" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+        <span class="card-title">Source Code</span>
+        <span class="card-subtitle">Browse on GitHub</span>
+      </a>
+      <a class="footer-card" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+        <span class="card-title">Live Demo</span>
+        <span class="card-subtitle">Try SupaTickets</span>
+      </a>
+      <a class="footer-card" href="https://github.com/dventimiha/pg-ticketing-system/blob/main/load-test-results.md" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
+        <span class="card-title">Benchmarks</span>
+        <span class="card-subtitle">Load test data</span>
+      </a>
+    </div>
+
+    <div class="tech-badges">
+      <span class="badge">Supabase</span>
+      <span class="badge">PostgreSQL</span>
+      <span class="badge">pgmq</span>
+      <span class="badge">pg_cron</span>
+      <span class="badge">Deno</span>
+      <span class="badge">Next.js</span>
+      <span class="badge">k6</span>
+    </div>
+
+    <p class="footer-attribution">Built with PostgreSQL + Supabase. Measured with k6.</p>
+  </section>
 
   <script>
     class HeroAnimation {
@@ -1123,6 +1209,10 @@
       results: {
         enter: () => resultsAnim.enter(),
         leave: () => resultsAnim.leave()
+      },
+      footer: {
+        enter: () => {},
+        leave: () => {}
       }
     });
   </script>
