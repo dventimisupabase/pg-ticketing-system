@@ -7,3 +7,4 @@ tests/load/results/*.txt
 tests/load/results/*.csv
 # Keep the .gitkeep so the directory is tracked
 !tests/load/results/.gitkeep
+.claude/
