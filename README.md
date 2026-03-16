@@ -2,7 +2,7 @@
 
 A two-database architecture that absorbs traffic spikes your production database can't. Built on PostgreSQL and Supabase, it turns a flood of concurrent writes into a metered stream — zero errors, sub-second latency, on the cheapest hardware.
 
-[**Explainer**](https://demo-liart-three-47.vercel.app/explainer/) | [**Live Demo**](https://demo-liart-three-47.vercel.app/) | [**Benchmarks**](load-test-results.md)
+[**Explainer**](https://demo-liart-three-47.vercel.app/about/) | [**Live Demo**](https://demo-liart-three-47.vercel.app/) | [**Benchmarks**](load-test-results.md)
 
 ## Why
 
