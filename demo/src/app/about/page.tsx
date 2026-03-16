@@ -21,7 +21,7 @@ export default function AboutPage() {
 
         <p>
           Read the full technical explainer:{' '}
-          <a href="https://dventimisupabase.github.io/pg-ticketing-system/" className="text-cyan-400 hover:underline" target="_blank" rel="noopener noreferrer">
+          <a href="/explainer/" className="text-cyan-400 hover:underline">
             Burst-to-Queue Ledger
           </a>
         </p>
